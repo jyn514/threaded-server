@@ -1,4 +1,4 @@
-CXXFLAGS = -g -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address -fsanitize-address-use-after-scope
+CXXFLAGS = -g -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address -fsanitize-address-use-after-scope -pthread
 
 main: main.o response.o parse.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
