@@ -21,16 +21,13 @@ static const string invalid_request =
 "<h1>Bad Request</h1>"
 "<p>Your browser sent a request that this server could not understand.<br />\r\n"
 "</p>\r\n"
-"</body></html>\r\n";
+"</body></html>\r\n",
+                    empty_response =
+"HTTP/1.1 204 No Content\r\n"
+"Content-Type: text/html; charset=utf-8\r\n\r\n";
 
 string handle_url(struct request_info info, map<string,string> headers) {
-  // lets just send some garbage
-  string response, tmp;
-  std::ifstream words("/usr/share/dict/american-english");
-  while (std::getline(words, tmp)) {
-    response += tmp + '\n';
-  }
-  return response;
+  return empty_response;
 }
 
 string handle_request(string& request) {
