@@ -1,9 +1,5 @@
-#include <pthread.h>
-#include <iostream>
-#include <stdio.h>
 #include <string>
 #include <map>
-#include <fstream>
 
 #include "response.h"
 #include "parse.h"
