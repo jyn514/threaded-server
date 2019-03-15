@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -7,10 +8,9 @@
 #include <arpa/inet.h>
 #include "response.h"
 
-#define MAX_THREADS 20
-
 using std::string;
 
+static int sockfd;
 volatile sig_atomic_t interrupted = 0;
 
 void *respond(void *arg) {
@@ -42,7 +42,12 @@ void *respond(void *arg) {
 
 // we can't pass arguments to interrupt handlers
 void cleanup(int ignored) {
+  close(sockfd);
   interrupted = 1;
+  // cout is not interrupt safe
+  const char *message = "Interrupted: preventing further connections\n";
+  write(STDERR_FILENO, message, strlen(message));
+  pthread_exit(NULL);
 }
 
 int main(void) {
@@ -53,7 +58,7 @@ int main(void) {
   addrport.sin_port = htons(8080);
   addrport.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (bind(sockfd, (struct sockaddr *) &addrport, sizeof(addrport)) != 0) {
     perror("Failed to bind to socket 8080, quitting");
     exit(1);
@@ -72,24 +77,16 @@ int main(void) {
   }
 
   /* open the socket */
-  if (listen(sockfd, MAX_THREADS) != 0) {
+  if (listen(sockfd, 10) != 0) {
     perror("Failed to listen to socket, quitting");
     exit(1);
   }
   /* main event loop.
    * get responses out of the way ASAP so we can listen to more connections */
-  pthread_t threads[MAX_THREADS];
-  int num_threads = 0;
   while (true) {
     long client_sock = accept(sockfd, NULL, NULL);
-    pthread_create(&threads[num_threads++], NULL, &respond, (void*)client_sock);
-    if (interrupted) {
-      close(sockfd);
-      std::cout << "Interrupted: preventing further connections\n";
-      for (int i = 0; i < num_threads; ++i) {
-        pthread_join(threads[i], NULL);
-      }
-      exit(130);
-    }
+    pthread_t current;
+    pthread_create(&current, NULL, &respond, (void*)client_sock);
+    pthread_detach(current);
   }
 }
