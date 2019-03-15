@@ -1,0 +1,21 @@
+cache-control: private
+content-type: text/html; charset=utf-8
+content-encoding: gzip
+x-frame-options: SAMEORIGIN
+x-request-guid: 368db7dc-1b32-44f1-811d-907210e7de01
+strict-transport-security: max-age=15552000
+content-security-policy: upgrade-insecure-requests
+accept-ranges: bytes
+age: 0
+accept-ranges: bytes
+date: Fri, 15 Mar 2019 18:07:08 GMT
+via: 1.1 varnish
+age: 0
+x-served-by: cache-atl6229-ATL
+x-cache: MISS
+x-cache-hits: 0
+x-timer: S1552673229.914317,VS0,VE60
+vary: Accept-Encoding,Fastly-SSL
+x-dns-prefetch-control: off
+content-length: 43950
+X-Firefox-Spdy: h2
