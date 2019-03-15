@@ -35,6 +35,7 @@ map<string, string> process_headers(string& request) {
   while ((stop = request.find(line_delim, start)) != std::string::npos) {
     // substr takes LENGTH as second argument, not ending position
     line = request.substr(start, stop - start);
+    if (line == "") break; // end of headers
     // find where header name stops
     name_end = line.find(':');
     header = request.substr(start, name_end);
