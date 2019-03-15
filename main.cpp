@@ -63,7 +63,11 @@ int main(void) {
   struct sigaction handler, old_handler;
   handler.sa_handler = &cleanup;
   if (sigaction(SIGINT, &handler, &old_handler) != 0) {
-    perror("Failed to register interrupt handler, quitting");
+    perror("Failed to register SIGINT handler, quitting");
+    exit(1);
+  }
+  if (sigaction(SIGTERM, &handler, &old_handler) != 0) {
+    perror("Failed to register SIGTERM handler, quitting");
     exit(1);
   }
 
