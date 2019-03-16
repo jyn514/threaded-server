@@ -1,6 +1,6 @@
 CXXFLAGS = -g -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address -fsanitize-address-use-after-scope -pthread
 
-main: main.o response.o parse.o
+main: main.o response.o parse.o lib/libmagic.so
 	$(CXX) $(CXXFLAGS) $^ -o $@
 main.o: response.h
 response.o: response.h parse.h

@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include "response.h"
+#include "lib/magic.h"
 
 // 2**16 - 1
 #define MAX_PORT 65535
@@ -17,6 +18,7 @@ using std::string;
 static int sockfd;
 volatile sig_atomic_t interrupted = 0;
 string current_dir;
+magic_t cookie;
 
 void *respond(void *arg) {
   int client_sock = (long)arg;
@@ -79,6 +81,14 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   current_dir = temp;
+
+  /* initialize libmagic */
+  if ((cookie = magic_open(MAGIC_SYMLINK |
+          MAGIC_MIME_ENCODING | MAGIC_MIME_TYPE)) == NULL
+      || magic_load(cookie, NULL) != 0) {
+    puts(magic_error(cookie));
+    exit(1);
+  }
 
   /* initialize socket */
   struct sockaddr_in addrport;
