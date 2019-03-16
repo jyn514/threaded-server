@@ -13,7 +13,9 @@ using std::string;
 
 extern string current_dir;
 
-static const string invalid_request =
+static const string ok =
+"HTTP/1.1 200 OK\r\n\r\n",
+                    invalid_request =
 "HTTP/1.1 400 Bad Request\r\n"
 "Content-Type: text/html; charset=utf-8\r\n"
 "<!doctype html>\r\n"
@@ -41,7 +43,7 @@ string get_file(const char *const filename) {
   std::vector<char> buffer(size);
   if (file.read(buffer.data(), size)) {
     string result(buffer.begin(), buffer.end());
-    return result;
+    return ok + result;
   }
   perror("Could not read file");
   return internal_error;
