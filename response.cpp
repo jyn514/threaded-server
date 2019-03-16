@@ -30,7 +30,14 @@ struct response {
 static inline string make_date(time_t t);
 
 static const char *index_page = "index.html",
-                  *server_agent = "crappy_server/0.0.1";
+                  *server_agent = "crappy_server/0.0.1",
+                  *error_format = "<!doctype html>\r\n"
+"<html><head>\r\n"
+"<title>%s</title>\r\n"
+"</head><body>\r\n"
+"<h1>%s</h1>"
+"<p>%s<br /></p>\r\n"
+"</body></html>\r\n";
 
 static inline const char *make_header(const enum response_code code) {
   switch(code) {
@@ -143,7 +150,16 @@ string handle_request(string& request) {
       map<string, string> headers = process_headers(request);
       handle_url(line, headers, result);
   }
-  // TODO: handle errors
+  if (result.code != OK) {
+    const char *error = "An error occured while processing your request",
+         *header = make_header(result.code);
+    result.headers["Content-Type"] = "text/html; charset=utf-8";
+    int length = snprintf(NULL, 0, error_format, header, header, error);
+    // don't include null byte
+    result.headers["Content-Length"] = std::to_string(length - 1);
+    result.body = (char*)malloc(length);
+    snprintf(result.body, length, error_format, header, header, error);
+  }
   add_default_headers(result.headers);
   return response_to_string(result);
 }
