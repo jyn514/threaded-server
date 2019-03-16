@@ -70,8 +70,10 @@ static inline const string make_header_line(const enum response_code code) {
 }
 
 static inline string response_to_string(const struct response& info) {
-  return make_header_line(info.code) +
+  string result = make_header_line(info.code) +
          headers_to_string(info.headers) + info.body;
+  free(info.body);
+  return result;
 }
 
 static inline void add_default_headers(map<string,string>& headers) {
