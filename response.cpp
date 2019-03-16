@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "response.h"
 #include "parse.h"
@@ -16,64 +17,116 @@ using std::string;
 
 extern string current_dir;
 
-static const string ok =
-"HTTP/1.1 200 OK\r\n\r\n",
-                    invalid_request =
-"HTTP/1.1 400 Bad Request\r\n"
-"Content-Type: text/html; charset=utf-8\r\n"
-"<!doctype html>\r\n"
-"<html><head>\r\n"
-"<title>400 Bad Request</title>\r\n"
-"</head><body>\r\n"
-"<h1>Bad Request</h1>"
-"<p>Your browser sent a request that this server could not understand.<br />\r\n"
-"</p>\r\n"
-"</body></html>\r\n",
-                    empty_response =
-"HTTP/1.1 204 No Content\r\n"
-"Content-Type: text/html; charset=utf-8\r\n\r\n",
-                    not_found =
-"HTTP/1.1 404 Not Found\r\n\r\n",
-                    internal_error =
-"HTTP/1.1 500 Internal Server Error\r\n\r\n";
-static const char *index_page = "index.html";
+enum response_code {
+  OK, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR
+};
 
+struct response {
+  enum response_code code;
+  map<string, string> headers;
+  char *body;
+};
 
-string get_file(const char *const filename) {
+static inline string make_date(time_t t);
+
+static const char *index_page = "index.html",
+                  *server_agent = "crappy_server/0.0.1";
+
+static inline const char *make_header(const enum response_code code) {
+  switch(code) {
+    case OK:
+      return "200 OK";
+    case BAD_REQUEST:
+      return "400 Bad Request";
+    case NO_CONTENT:
+      return "204 No Content";
+    case NOT_FOUND:
+      return "404 Not Found";
+    case INTERNAL_ERROR:
+    default: // how did we get here?
+      if (code != INTERNAL_ERROR)
+        std::cerr << "Invalid response code\n";
+      return "500 Internal Error";
+  }
+}
+
+static inline string headers_to_string(const map<string, string>& headers) {
+  string result;
+  for (auto const &entry : headers) {
+    result += entry.first + ": " + entry.second + "\r\n";
+  }
+  return result + "\r\n";
+}
+
+static inline const string make_header_line(const enum response_code code) {
+  return string("HTTP/1.1 ") + make_header(code) + "\r\n";
+}
+
+static inline string response_to_string(const struct response& info) {
+  return make_header_line(info.code) +
+         headers_to_string(info.headers) + info.body;
+}
+
+static inline void add_default_headers(map<string,string>& headers) {
+  headers["Date"] = make_date(time(NULL));
+  headers["Server"] = server_agent;
+}
+
+static inline string make_date(const time_t t) {
+  //  %a: 3, %d: 2, %b: 3, %Y: 4, %H: 2, %M: 2, %S: 2
+  //  3 + 2 + 2 + 1 + 3 + 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 + 4 = 29
+  //  lets double it, why not
+  static const int len = 60;
+  char date[len];
+  struct tm *current_time = localtime(&t);
+  if (current_time == NULL) {
+    perror("Failed to get current time");
+    return string();
+  }
+  strftime(date, len, "%a, %d %b %Y %H:%M:%S GMT", current_time);
+  return string(date);
+}
+
+static void get_file(const char *const filename, struct response& info) {
   std::ifstream file(filename, std::ios::binary | std::ios::ate);
   std::streamsize size = file.tellg();
   file.seekg(0, std::ios::beg);
 
-  std::vector<char> buffer(size);
-  if (file.read(buffer.data(), size)) {
-    string result(buffer.begin(), buffer.end());
-    return ok + result;
+  info.body = (char*)malloc(size + 1);
+  info.body[size] = '\0';
+  if (file.read(info.body, size)) {
+    info.code = OK;
+    info.headers["Content-Length"] = std::to_string(size);
+    // TODO: content type
+    return;
   }
   perror("Could not read file");
-  return internal_error;
+  info.code = INTERNAL_ERROR;
 }
 
-string handle_url(struct request_info& info,
-                  const map<string,string>& headers) {
+static void handle_url(struct request_info& info,
+                const map<string,string>& headers,
+                struct response& result) {
   struct stat stat_info;
   if (stat(info.url.c_str(), &stat_info) == 0 && S_ISDIR(stat_info.st_mode)) {
     if (info.url.back() != '/') info.url += '/';
     info.url += index_page;
   }
   char *path = realpath((current_dir + info.url).c_str(), NULL);
-  if (path == NULL)
-    return not_found;
+  if (path == NULL) {
+    result.code = NOT_FOUND;
   // attempted path traversal attack
-  if (current_dir.compare(0, string::npos, path, current_dir.size()) != 0) {
+  } else if (current_dir.compare(0, string::npos, path, current_dir.size()) != 0) {
     std::stringstream log;
     log << "Preventing path traversal attack on " << path << '\n';
     std::cerr << log.str();
     free(path);
-    return not_found;
+    result.code = NOT_FOUND;
+  } else {
+    get_file(path, result);
+    result.headers["Last-Modified"] = make_date(stat_info.st_mtim.tv_sec);
+    free(path);
   }
-  string result = get_file(path);
-  free(path);
-  return result;
 }
 
 string handle_request(string& request) {
@@ -83,7 +136,14 @@ string handle_request(string& request) {
   std::stringstream log;
   log << "Parsed url as " << line.url << '\n';
   std::cerr << log.str();
-  if (line.method == ERROR) return invalid_request;
-  map<string, string> headers = process_headers(request);
-  return handle_url(line, headers);
+
+  struct response result;
+  if (line.method == ERROR) result.code = BAD_REQUEST;
+  else {
+      map<string, string> headers = process_headers(request);
+      handle_url(line, headers, result);
+  }
+  // TODO: handle errors
+  add_default_headers(result.headers);
+  return response_to_string(result);
 }
