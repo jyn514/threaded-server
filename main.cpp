@@ -9,6 +9,9 @@
 #include <arpa/inet.h>
 #include "response.h"
 
+// 2**16 - 1
+#define MAX_PORT 65535
+
 using std::string;
 
 static int sockfd;
@@ -52,7 +55,17 @@ void cleanup(int ignored) {
   pthread_exit(NULL);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    std::cerr << "usage: " << argv[0] << " <port>\n";
+    exit(1);
+  }
+  const int port = strtol(argv[1], NULL, 0);
+  if (port > MAX_PORT) {
+    std::cerr << "invalid port number: port must be <= " << MAX_PORT << '\n';
+    exit(1);
+  }
+
   /* set current_dir */
   char temp[PATH_MAX];
   if (!getcwd(temp, sizeof(temp))) {
@@ -64,12 +77,12 @@ int main(void) {
   /* initialize socket */
   struct sockaddr_in addrport;
   addrport.sin_family = AF_INET;
-  addrport.sin_port = htons(8080);
+  addrport.sin_port = htons(port);
   addrport.sin_addr.s_addr = htonl(INADDR_ANY);
 
   sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (bind(sockfd, (struct sockaddr *) &addrport, sizeof(addrport)) != 0) {
-    perror("Failed to bind to socket 8080, quitting");
+    perror("Failed to bind to socket, quitting");
     exit(1);
   }
 
