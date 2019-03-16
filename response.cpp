@@ -52,6 +52,14 @@ string handle_url(const struct request_info& info,
   char *path = realpath((current_dir + info.url).c_str(), NULL);
   if (path == NULL)
     return not_found;
+  // attempted path traversal attack
+  if (current_dir.compare(0, string::npos, path, current_dir.size()) != 0) {
+    std::stringstream log;
+    log << "Preventing path traversal attack on " << path << '\n';
+    std::cerr << log.str();
+    free(path);
+    return not_found;
+  }
   string result = get_file(path);
   free(path);
   return result;
