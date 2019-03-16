@@ -41,9 +41,12 @@ void *respond(void *arg) {
     return NULL;
   }
   BUF.resize(received);
-  string result = handle_request(BUF);
-  send(client_sock, &result[0], result.size(), 0);
+  struct response result = handle_request(BUF);
+  send(client_sock, &result.status[0], result.status.size(), 0);
+  send(client_sock, &result.headers[0], result.headers.size(), 0);
+  send(client_sock, &(*result.body)[0], result.body->size(), 0);
   close(client_sock);
+  delete result.body;
   return NULL;
 }
 
