@@ -14,6 +14,7 @@
 #include "lib/magic.h"
 
 using std::map;
+using std::vector;
 using std::string;
 
 extern string current_dir;
@@ -23,10 +24,10 @@ enum response_code {
   OK, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR
 };
 
-struct response {
+struct internal_response {
   enum response_code code;
   map<string, string> headers;
-  char *body;
+  vector<char> *body;
 };
 
 static inline string make_date(time_t t);
@@ -71,13 +72,6 @@ static inline const string make_header_line(const enum response_code code) {
   return string("HTTP/1.1 ") + make_header(code) + "\r\n";
 }
 
-static inline string response_to_string(const struct response& info) {
-  string result = make_header_line(info.code) +
-         headers_to_string(info.headers) + info.body;
-  free(info.body);
-  return result;
-}
-
 static inline void add_default_headers(map<string,string>& headers) {
   headers["Date"] = make_date(time(NULL));
   headers["Server"] = server_agent;
@@ -98,14 +92,13 @@ static inline string make_date(const time_t t) {
   return string(date);
 }
 
-static void get_file(const char *const filename, struct response& info) {
+static void get_file(const char *const filename, struct internal_response& info) {
   std::ifstream file(filename, std::ios::binary | std::ios::ate);
   std::streamsize size = file.tellg();
   file.seekg(0, std::ios::beg);
 
-  info.body = (char*)malloc(size + 1);
-  info.body[size] = '\0';
-  if (file.read(info.body, size)) {
+  info.body = new vector<char>(size);
+  if (file.read(&(*info.body)[0], size)) {
     info.code = OK;
     info.headers["Content-Length"] = std::to_string(size);
     info.headers["Content-Type"] = magic_file(cookie, filename);
@@ -117,7 +110,7 @@ static void get_file(const char *const filename, struct response& info) {
 
 static void handle_url(struct request_info& info,
                 const map<string,string>& headers,
-                struct response& result) {
+                struct internal_response& result) {
   struct stat stat_info;
   if (stat(info.url.c_str(), &stat_info) == 0 && S_ISDIR(stat_info.st_mode)) {
     if (info.url.back() != '/') info.url += '/';
@@ -140,7 +133,7 @@ static void handle_url(struct request_info& info,
   }
 }
 
-string handle_request(string& request) {
+struct response handle_request(string& request) {
   // cerr is thread-safe PER CALL, so multiple << operators may be reordered
   std::cerr << request;
   struct request_info line = process_request_line(request);
@@ -148,7 +141,7 @@ string handle_request(string& request) {
   log << "Parsed url as " << line.url << '\n';
   std::cerr << log.str();
 
-  struct response result;
+  struct internal_response result;
   if (line.method == ERROR) result.code = BAD_REQUEST;
   else {
       map<string, string> headers = process_headers(request);
@@ -161,9 +154,13 @@ string handle_request(string& request) {
     int length = snprintf(NULL, 0, error_format, header, header, error);
     // don't include null byte
     result.headers["Content-Length"] = std::to_string(length - 1);
-    result.body = (char*)malloc(length);
-    snprintf(result.body, length, error_format, header, header, error);
+    result.body = new vector<char>(length);
+    snprintf(&(*result.body)[0], length, error_format, header, header, error);
   }
   add_default_headers(result.headers);
-  return response_to_string(result);
+  return {
+    make_header_line(result.code),
+    headers_to_string(result.headers),
+    result.body
+  };
 }
