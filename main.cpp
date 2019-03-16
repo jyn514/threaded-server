@@ -56,15 +56,21 @@ void cleanup(int ignored) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 2) {
-    std::cerr << "usage: " << argv[0] << " <port>\n";
+  if (argc > 3 || (argc == 2 &&
+      (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0))) {
+    std::cerr << "usage: " << argv[0] << " [<port>] [<host>]\n";
     exit(1);
   }
-  const int port = strtol(argv[1], NULL, 0);
-  if (port > MAX_PORT) {
-    std::cerr << "invalid port number: port must be <= " << MAX_PORT << '\n';
+  // by pure chance, strtol returns 0 if the entire string is invalid
+  // since 0 is an invalid port anyway, we don't need to handle this specially
+  // this does mean that strings starting with a valid port number then garbage
+  // will be accepted
+  const int port = argc > 1 ? strtol(argv[1], NULL, 0) : 80;
+  if (port < 1 || port > MAX_PORT) {
+    std::cerr << "invalid port number: port must be between 1 and " << MAX_PORT << '\n';
     exit(1);
   }
+  const char *addr = argc > 2 ? argv[2] : "0.0.0.0";
 
   /* set current_dir */
   char temp[PATH_MAX];
@@ -78,7 +84,10 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in addrport;
   addrport.sin_family = AF_INET;
   addrport.sin_port = htons(port);
-  addrport.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (inet_aton(addr, &addrport.sin_addr) == 0) {
+    std::cerr << "Invalid hostname " << addr << '\n';
+    exit(1);
+  }
 
   sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (bind(sockfd, (struct sockaddr *) &addrport, sizeof(addrport)) != 0) {
