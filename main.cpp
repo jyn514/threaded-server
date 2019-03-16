@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
@@ -12,6 +13,7 @@ using std::string;
 
 static int sockfd;
 volatile sig_atomic_t interrupted = 0;
+string current_dir;
 
 void *respond(void *arg) {
   int client_sock = (long)arg;
@@ -51,6 +53,13 @@ void cleanup(int ignored) {
 }
 
 int main(void) {
+  /* set current_dir */
+  char temp[PATH_MAX];
+  if (!getcwd(temp, sizeof(temp))) {
+    perror("Could not getcwd");
+    exit(1);
+  }
+  current_dir = temp;
 
   /* initialize socket */
   struct sockaddr_in addrport;

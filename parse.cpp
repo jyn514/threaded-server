@@ -6,7 +6,7 @@ using std::map;
 static const string line_delim = "\r\n";
 
 struct request_info process_request_line(string& request) {
-  size_t line_end = request.find(line_delim), space_end;
+  size_t line_end = request.find(line_delim), method_end, url_end;
   struct request_info result = {GET, ""};
 
   if (line_end == string::npos) {
@@ -14,13 +14,16 @@ struct request_info process_request_line(string& request) {
     return error;
   }
   string request_line = request.substr(0, line_end);
-  space_end = request_line.find(' ');
-  if (request_line.substr(0, space_end) != "GET") {
+  /* parse METHOD */
+  method_end = request_line.find(' ');
+  if (request_line.substr(0, method_end) != "GET") {
     struct request_info error = {ERROR, "Unrecognized method"};
     return error;
   }
 
-  result.url = request.substr(space_end + 1, line_end - space_end - 1);
+  /* parse url */
+  url_end = request_line.find(' ', method_end + 1);
+  result.url = request.substr(method_end + 1, url_end - method_end - 1);
   request.erase(0, line_end + 2);
   return result;
 }
