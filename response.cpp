@@ -4,6 +4,9 @@
 #include <string>
 #include <map>
 #include <fstream>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "response.h"
 #include "parse.h"
@@ -33,6 +36,7 @@ static const string ok =
 "HTTP/1.1 404 Not Found\r\n\r\n",
                     internal_error =
 "HTTP/1.1 500 Internal Server Error\r\n\r\n";
+static const char *index_page = "index.html";
 
 
 string get_file(const char *const filename) {
@@ -49,8 +53,13 @@ string get_file(const char *const filename) {
   return internal_error;
 }
 
-string handle_url(const struct request_info& info,
+string handle_url(struct request_info& info,
                   const map<string,string>& headers) {
+  struct stat stat_info;
+  if (stat(info.url.c_str(), &stat_info) == 0 && S_ISDIR(stat_info.st_mode)) {
+    if (info.url.back() != '/') info.url += '/';
+    info.url += index_page;
+  }
   char *path = realpath((current_dir + info.url).c_str(), NULL);
   if (path == NULL)
     return not_found;
