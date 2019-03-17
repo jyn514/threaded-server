@@ -21,10 +21,6 @@ string current_dir;
 
 void *respond(void *arg) {
   int client_sock = (long)arg;
-  if (client_sock < 0) {
-    if (!interrupted) perror("Failed to receive socket connection, ignoring");
-    return NULL;
-  }
   int bytes;
   if (ioctl(client_sock, FIONREAD, &bytes)) {
     perror("Could not get number of bytes");
@@ -121,8 +117,16 @@ int main(int argc, char *argv[]) {
    * get responses out of the way ASAP so we can listen to more connections */
   while (true) {
     long client_sock = accept(sockfd, NULL, NULL);
-    pthread_t current;
-    pthread_create(&current, NULL, &respond, (void*)client_sock);
-    pthread_detach(current);
+    // branches are expensive,
+    // but making a thread for a failed connection is more expensive
+    // also, accept will reset perror, so this is only chance to find out
+    // why we have an error
+    if (client_sock < 0) {
+      if (!interrupted) perror("Failed to receive socket connection, ignoring");
+    } else {
+      pthread_t current;
+      pthread_create(&current, NULL, &respond, (void*)client_sock);
+      pthread_detach(current);
+    }
   }
 }
