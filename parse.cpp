@@ -72,7 +72,10 @@ struct request_info process_request_line(string& request) {
 
   /* parse url */
   url_end = request_line.find(' ', method_end + 1);
-  result.url = request.substr(method_end + 1, url_end - method_end - 1);
+  if (url_end == string::npos)  // no http.version
+    result.url = request_line.substr(method_end + 1);
+  else
+    result.url = request.substr(method_end + 1, url_end - method_end - 1);
   request.erase(0, line_end + 2);
   return result;
 }
