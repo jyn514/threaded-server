@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     perror("Could not getcwd");
     exit(1);
   }
-  current_dir = temp;
+  current_dir = temp + '/';
 
   /* initialize socket */
   struct sockaddr_in addrport;
