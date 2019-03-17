@@ -6,6 +6,8 @@
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -25,7 +27,9 @@ enum response_code {
 struct internal_response {
   enum response_code code;
   map<string, string> headers;
-  vector<char> *body;
+  int length;
+  bool is_mmapped;
+  char *body;  // NOT a string, might not be null terminated
 };
 
 static inline string make_date(time_t t);
@@ -91,18 +95,21 @@ static inline string make_date(const time_t t) {
 }
 
 static void get_file(const char *const filename, struct internal_response& info) {
-  std::ifstream file(filename, std::ios::binary | std::ios::ate);
-  std::streamsize size = file.tellg();
-  file.seekg(0, std::ios::beg);
 
-  info.body = new vector<char>(size);
-  if (file.read(&(*info.body)[0], size)) {
+  int fd = open(filename, O_RDONLY);
+  if (fd == -1) {
+    perror("Could not open file");
+    info.code = INTERNAL_ERROR;
+    return;
+  }
+  info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
+  if (info.body != MAP_FAILED) {
     info.code = OK;
-    info.headers["Content-Length"] = std::to_string(size);
+    info.is_mmapped = true;
     info.headers["Content-Type"] = get_mimetype(filename);
     return;
   }
-  perror("Could not read file");
+  perror("Could not mmap file");
   info.code = INTERNAL_ERROR;
 }
 
@@ -110,9 +117,16 @@ static void handle_url(struct request_info& info,
                 const map<string,string>& headers,
                 struct internal_response& result) {
   struct stat stat_info;
-  if (stat(info.url.c_str(), &stat_info) == 0 && S_ISDIR(stat_info.st_mode)) {
+  int error;
+  // ignore leading /
+  if ((error = stat(info.url.substr(1).c_str(), &stat_info)) == 0
+      && S_ISDIR(stat_info.st_mode)) {
     if (info.url.back() != '/') info.url += '/';
     info.url += index_page;
+    error = stat(info.url.c_str(), &stat_info);
+  }
+  if (error != 0) {
+    perror("stat failed");
   }
   char *path = realpath((current_dir + info.url).c_str(), NULL);
   if (path == NULL) {
@@ -125,7 +139,9 @@ static void handle_url(struct request_info& info,
     free(path);
     result.code = NOT_FOUND;
   } else {
+    result.length = stat_info.st_size;
     get_file(path, result);
+    result.headers["Content-Length"] = std::to_string(stat_info.st_size);
     result.headers["Last-Modified"] = make_date(stat_info.st_mtim.tv_sec);
     free(path);
   }
@@ -140,6 +156,7 @@ struct response handle_request(string& request) {
   std::cerr << log.str();
 
   struct internal_response result;
+  result.is_mmapped = false;
   if (line.method == ERROR) result.code = BAD_REQUEST;
   else {
       map<string, string> headers = process_headers(request);
@@ -152,13 +169,16 @@ struct response handle_request(string& request) {
     int length = snprintf(NULL, 0, error_format, header, header, error);
     // don't include null byte
     result.headers["Content-Length"] = std::to_string(length - 1);
-    result.body = new vector<char>(length);
-    snprintf(&(*result.body)[0], length, error_format, header, header, error);
+    result.length = length - 1;
+    result.body = (char*)malloc(length);
+    snprintf(result.body, length, error_format, header, header, error);
   }
   add_default_headers(result.headers);
   return {
     make_header_line(result.code),
     headers_to_string(result.headers),
-    result.body
+    result.body,
+    result.length,
+    result.is_mmapped
   };
 }
