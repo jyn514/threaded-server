@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <arpa/inet.h>
 #include "response.h"
 
@@ -42,9 +43,10 @@ void *respond(void *arg) {
   struct response result = handle_request(BUF);
   send(client_sock, &result.status[0], result.status.size(), 0);
   send(client_sock, &result.headers[0], result.headers.size(), 0);
-  send(client_sock, &(*result.body)[0], result.body->size(), 0);
+  send(client_sock, result.body, result.length, 0);
   close(client_sock);
-  delete result.body;
+  if (result.is_mmapped) munmap(result.body, result.length);
+  else free(result.body);
   return NULL;
 }
 
