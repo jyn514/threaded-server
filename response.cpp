@@ -118,25 +118,23 @@ static void handle_url(struct request_info& info,
                 struct internal_response& result) {
   struct stat stat_info;
   int error;
-  // ignore leading /
-  if ((error = stat(info.url.substr(1).c_str(), &stat_info)) == 0
+  // treat leading / as ./. Has the side effect of preventing path traversal
+  info.url = "." + info.url;
+  if ((error = stat(info.url.c_str(), &stat_info)) == 0
       && S_ISDIR(stat_info.st_mode)) {
+    // requested a subdirectory with no trailing slash
     if (info.url.back() != '/') info.url += '/';
     info.url += index_page;
     error = stat(info.url.c_str(), &stat_info);
   }
-  if (error != 0) {
+  if (errno == ENOENT) {
+    result.code = NOT_FOUND;
+    return;
+  } else if (error) { // haven't handled this specifically, let realpath do it
     perror("stat failed");
   }
   char *path = realpath((current_dir + info.url).c_str(), NULL);
   if (path == NULL) {
-    result.code = NOT_FOUND;
-  // attempted path traversal attack
-  } else if (current_dir.compare(0, string::npos, path, current_dir.size()) != 0) {
-    std::stringstream log;
-    log << "Preventing path traversal attack on " << path << '\n';
-    std::cerr << log.str();
-    free(path);
     result.code = NOT_FOUND;
   } else {
     result.length = stat_info.st_size;
