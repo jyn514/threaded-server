@@ -112,6 +112,10 @@ static void get_file(const char *const filename, struct internal_response& info)
   }
   info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
   if (info.body != MAP_FAILED) {
+    // this is a hack: the memory will stay mapped and
+    // we don't have to worry about closing the file later.
+    // see `man 2 munmap`
+    close(fd);
     info.code = OK;
     info.is_mmapped = true;
     info.headers["Content-Type"] = get_mimetype(filename);
