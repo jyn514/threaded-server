@@ -1,9 +1,58 @@
+#include <fstream>
+#include "lib/magic.h"
 #include "parse.h"
 
 using std::string;
 using std::map;
 
+map<string, string> get_all_mimetypes(void);
+
 static const string line_delim = "\r\n";
+static map<string, string> mimetypes = get_all_mimetypes();
+
+string& get_mimetype(const char *const filename) {
+  string name(filename), ext;
+  size_t ext_start = name.rfind('.') + 1;
+  ext = name.substr(ext_start, string::npos);
+  auto type = mimetypes.find(ext);
+  if (type != mimetypes.end()) return type->second;
+
+  // do the expensive libmagic calls
+  // initialize libmagic; it's not thread safe so we don't initialize in main
+  magic_t cookie;
+  if ((cookie = magic_open(MAGIC_SYMLINK |
+          MAGIC_MIME_ENCODING | MAGIC_MIME_TYPE)) == NULL
+      || magic_load(cookie, NULL) != 0) {
+    puts(magic_error(cookie));
+    exit(1);
+  }
+
+  string result = magic_file(cookie, filename);
+  // assume this never changes while the server is running
+  mimetypes[ext] = result;
+  magic_close(cookie);
+  return mimetypes[ext];
+}
+
+map<string, string> get_all_mimetypes(void) {
+  map<string, string> result;
+  std::ifstream mime_database("mime.types");
+  if (!mime_database) // ??
+    // empty map, we'll look files up with libmagic at runtime
+    return result;
+  string line;
+  while (std::getline(mime_database, line)) {
+    size_t type_end = line.find('\t');
+    if (type_end == string::npos) continue;
+    size_t ext_start = type_end;
+
+    // discard whitespace
+    while (isspace(line.at(++ext_start)));
+    result[line.substr(0, type_end)] =
+      line.substr(ext_start, line.size() - type_end - 1);
+  }
+  return result;
+}
 
 struct request_info process_request_line(string& request) {
   size_t line_end = request.find(line_delim), method_end, url_end;
