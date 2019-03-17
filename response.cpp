@@ -11,14 +11,12 @@
 
 #include "response.h"
 #include "parse.h"
-#include "lib/magic.h"
 
 using std::map;
 using std::vector;
 using std::string;
 
 extern string current_dir;
-extern magic_t cookie;
 
 enum response_code {
   OK, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR
@@ -101,7 +99,7 @@ static void get_file(const char *const filename, struct internal_response& info)
   if (file.read(&(*info.body)[0], size)) {
     info.code = OK;
     info.headers["Content-Length"] = std::to_string(size);
-    info.headers["Content-Type"] = magic_file(cookie, filename);
+    info.headers["Content-Type"] = get_mimetype(filename);
     return;
   }
   perror("Could not read file");
