@@ -21,7 +21,7 @@ using std::string;
 extern string current_dir;
 
 enum response_code {
-  OK, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR
+  OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR
 };
 
 struct internal_response {
@@ -54,6 +54,8 @@ static inline const char *make_header(const enum response_code code) {
       return "204 No Content";
     case NOT_FOUND:
       return "404 Not Found";
+    case TRY_AGAIN:
+      return "503 Service Unavailable";
     case INTERNAL_ERROR:
     default: // how did we get here?
       if (code != INTERNAL_ERROR)
@@ -98,8 +100,14 @@ static void get_file(const char *const filename, struct internal_response& info)
 
   int fd = open(filename, O_RDONLY);
   if (fd == -1) {
-    perror("Could not open file");
+    // TODO: set up a semaphore and wait until we can open the file
+    if (errno == EMFILE) {
+      info.code = TRY_AGAIN;
+      info.headers["Retry-After"] = std::to_string(1);
+      return;
+    }
     info.code = INTERNAL_ERROR;
+    perror("Could not open file");
     return;
   }
   info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
