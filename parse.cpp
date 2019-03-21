@@ -37,19 +37,21 @@ string& get_mimetype(const char *const filename) {
 map<string, string> get_all_mimetypes(void) {
   map<string, string> result;
   std::ifstream mime_database("mime.types");
-  if (!mime_database) // ??
+  if (!mime_database) // file not found or IO error
+  mime_database.open("/etc/mime.types");
+  if (!mime_database)
     // empty map, we'll look files up with libmagic at runtime
     return result;
   string line;
   while (std::getline(mime_database, line)) {
-    size_t type_end = line.find('\t');
-    if (type_end == string::npos) continue;
-    size_t ext_start = type_end;
+    size_t type_end, ext_start;
+    if ((line.size() && line.at(0) == '#')
+        || (type_end = line.find('\t')) == string::npos) continue;
+    ext_start = type_end;
 
     // discard whitespace
     while (isspace(line.at(++ext_start)));
-    result[line.substr(0, type_end)] =
-      line.substr(ext_start, line.size() - type_end - 1);
+    result[line.substr(ext_start, line.size() - type_end - 1)] = line.substr(0, type_end);
   }
   return result;
 }
