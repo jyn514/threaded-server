@@ -37,9 +37,11 @@ void *respond(void *arg) {
   }
   BUF.resize(received);
   struct response result = handle_request(BUF);
-  send(client_sock, &result.status[0], result.status.size(), 0);
-  send(client_sock, &result.headers[0], result.headers.size(), 0);
-  send(client_sock, result.body, result.length, 0);
+  if (send(client_sock, &result.status[0], result.status.size(), 0) < 0
+      || send(client_sock, &result.headers[0], result.headers.size(), 0) < 0
+      || send(client_sock, result.body, result.length, 0) < 0) {
+    if (errno != EPIPE) perror("Failed to send data through socket");
+  }
   close(client_sock);
   if (result.is_mmapped) munmap(result.body, result.length);
   else free(result.body);
@@ -97,14 +99,20 @@ int main(int argc, char *argv[]) {
   }
 
   /* register interrupt handler to close the socket */
-  struct sigaction handler, old_handler;
+  struct sigaction handler;
   handler.sa_handler = &cleanup;
-  if (sigaction(SIGINT, &handler, &old_handler) != 0) {
+  if (sigaction(SIGINT, &handler, NULL) != 0) {
     perror("Failed to register SIGINT handler, quitting");
     exit(1);
   }
-  if (sigaction(SIGTERM, &handler, &old_handler) != 0) {
+  if (sigaction(SIGTERM, &handler, NULL) != 0) {
     perror("Failed to register SIGTERM handler, quitting");
+    exit(1);
+  }
+  /* ignore SIGPIPE when client closes a connection */
+  handler.sa_handler = SIG_IGN;
+  if (sigaction(SIGPIPE, &handler, NULL) != 0) {
+    perror("Failed to register SIGPIPE handler, quitting");
     exit(1);
   }
 
