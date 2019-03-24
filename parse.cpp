@@ -58,26 +58,29 @@ map<string, string> get_all_mimetypes(void) {
 
 struct request_info process_request_line(string& request) {
   size_t line_end = request.find(line_delim), method_end, url_end;
-  struct request_info result = {GET, ""};
+  struct request_info result = {GET, "", "HTTP/1.0"};
 
   if (line_end == string::npos) {
-    struct request_info error = {ERROR, ""};
-    return error;
+    result.method = ERROR;
+    return result;
   }
   string request_line = request.substr(0, line_end);
   /* parse METHOD */
   method_end = request_line.find(' ');
   if (request_line.substr(0, method_end) != "GET") {
-    struct request_info error = {ERROR, "Unrecognized method"};
-    return error;
+    result.method = ERROR;
+    result.url = "Unrecognized method";
+    return result;
   }
 
   /* parse url */
   url_end = request_line.find(' ', method_end + 1);
-  if (url_end == string::npos)  // no http.version
+  if (url_end == string::npos) {  // no http.version
     result.url = request_line.substr(method_end + 1);
-  else
+  } else {
     result.url = request.substr(method_end + 1, url_end - method_end - 1);
+    result.version = request_line.substr(url_end + 1, string::npos);
+  }
   request.erase(0, line_end + 2);
   return result;
 }

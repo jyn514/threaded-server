@@ -5,13 +5,22 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
+/* check available bytes */
 #include <sys/ioctl.h>
+/* mmap */
 #include <sys/mman.h>
+/* INET_ADDR */
 #include <arpa/inet.h>
+/* poll */
+#include <poll.h>
+
 #include "response.h"
 
 // 2**16 - 1
 #define MAX_PORT 65535
+#define SOCKET_BUF_SIZE 8192
+// milliseconds
+#define TIMEOUT 30000
 
 using std::string;
 
@@ -28,23 +37,34 @@ void *respond(void *arg) {
   }
   std::cout << "got new socket connection: " << client_sock
    << " with num bytes " << bytes << '\n';
-  string BUF(8192, 0);
-  // fails miserably if the socket doesn't contain an entire HTTP request
-  int received = recv(client_sock, &BUF[0], 8192, 0);
-  if (received < 0) {
-    perror("Receive failed");
-    return NULL;
+  string BUF(SOCKET_BUF_SIZE, 0);
+
+  struct pollfd fds = {client_sock, POLL_IN, 0};
+
+  while (poll(&fds, 1, TIMEOUT) > 0) {
+    // fails miserably if the socket doesn't contain an entire HTTP request
+    int received = recv(client_sock, &BUF[0], SOCKET_BUF_SIZE, 0);
+    if (received < 0) {
+      perror("Receive failed");
+      return NULL;
+    } else if (received == 0) { // connection closed
+      return NULL;
+    }
+    BUF.resize(received);
+    struct response result = handle_request(BUF);
+    if (send(client_sock, &result.status[0], result.status.size(), 0) < 0
+        || send(client_sock, &result.headers[0], result.headers.size(), 0) < 0
+        || send(client_sock, result.body, result.length, 0) < 0) {
+      if (errno != EPIPE) perror("Failed to send data through socket");
+    }
+    BUF.resize(SOCKET_BUF_SIZE);
+    if (result.is_mmapped) munmap(result.body, result.length);
+    else free(result.body);
+
+    if (!result.persist_connection) break;
   }
-  BUF.resize(received);
-  struct response result = handle_request(BUF);
-  if (send(client_sock, &result.status[0], result.status.size(), 0) < 0
-      || send(client_sock, &result.headers[0], result.headers.size(), 0) < 0
-      || send(client_sock, result.body, result.length, 0) < 0) {
-    if (errno != EPIPE) perror("Failed to send data through socket");
-  }
+
   close(client_sock);
-  if (result.is_mmapped) munmap(result.body, result.length);
-  else free(result.body);
   return NULL;
 }
 
