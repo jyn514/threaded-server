@@ -2,7 +2,7 @@
 #include <map>
 
 enum method {
-  GET, NOT_RECOGNIZED, ERROR
+  GET, HEAD, NOT_RECOGNIZED, ERROR
 };
 
 struct request_info {
