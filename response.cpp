@@ -57,9 +57,6 @@ static inline const char *make_header(const enum response_code code) {
     case TRY_AGAIN:
       return "503 Service Unavailable";
     case INTERNAL_ERROR:
-    default: // how did we get here?
-      if (code != INTERNAL_ERROR)
-        std::cerr << "Invalid response code\n";
       return "500 Internal Error";
   }
 }

@@ -1,4 +1,7 @@
-CXXFLAGS = -g -Wall -Wextra -Wpedantic -Wshadow -fsanitize=address -fsanitize-address-use-after-scope -pthread
+CC = clang
+CXX = $(CC)++
+override CFLAGS += -g3 -Wall -Wextra -Wpedantic -Wshadow -Wcovered-switch-default -pthread -flto
+override CXXFLAGS = $(CFLAGS)
 
 main: main.o response.o parse.o lib/libmagic.so
 	$(CXX) $(CXXFLAGS) $^ -o $@
