@@ -68,8 +68,7 @@ struct request_info process_request_line(string& request) {
   /* parse METHOD */
   method_end = request_line.find(' ');
   if (request_line.substr(0, method_end) != "GET") {
-    result.method = ERROR;
-    result.url = "Unrecognized method";
+    result.method = NOT_RECOGNIZED;
     return result;
   }
 
