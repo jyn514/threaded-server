@@ -67,7 +67,12 @@ struct request_info process_request_line(string& request) {
   string request_line = request.substr(0, line_end);
   /* parse METHOD */
   method_end = request_line.find(' ');
-  if (request_line.substr(0, method_end) != "GET") {
+  string method = request_line.substr(0, method_end);
+  if (method == "HEAD") {
+    // do everything exactly the same as a GET, but main will not send the data
+    // this catches access errors to files
+    result.method = HEAD;
+  } else if (method != "GET") {
     result.method = NOT_RECOGNIZED;
     return result;
   }
