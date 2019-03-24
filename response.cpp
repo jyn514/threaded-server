@@ -145,13 +145,13 @@ static void handle_url(struct request_info& info,
   char *path = realpath((current_dir + info.url).c_str(), NULL);
   if (path == NULL) {
     result.code = NOT_FOUND;
-  } else {
-    result.length = stat_info.st_size;
-    get_file(path, result);
-    result.headers["Content-Length"] = std::to_string(stat_info.st_size);
-    result.headers["Last-Modified"] = make_date(stat_info.st_mtim.tv_sec);
-    free(path);
+    return;
   }
+  result.length = stat_info.st_size;
+  get_file(path, result);
+  result.headers["Content-Length"] = std::to_string(stat_info.st_size);
+  result.headers["Last-Modified"] = make_date(stat_info.st_mtim.tv_sec);
+  free(path);
 }
 
 struct response handle_request(string& request) {
