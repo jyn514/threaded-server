@@ -21,7 +21,8 @@ using std::string;
 extern string current_dir;
 
 enum response_code {
-  OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR
+  OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
+  NOT_IMPLEMENTED
 };
 
 struct internal_response {
@@ -58,6 +59,8 @@ static inline const char *make_header(const enum response_code code) {
       return "503 Service Unavailable";
     case INTERNAL_ERROR:
       return "500 Internal Error";
+    case NOT_IMPLEMENTED:
+      return "501 Not Implemented";
   }
 }
 
@@ -165,6 +168,7 @@ struct response handle_request(string& request) {
   struct internal_response result;
   result.is_mmapped = false;
   if (line.method == ERROR) result.code = BAD_REQUEST;
+  else if (line.method == NOT_RECOGNIZED) result.code = NOT_IMPLEMENTED;
   else {
       map<string, string> headers = process_headers(request);
       handle_url(line, headers, result);
