@@ -185,9 +185,14 @@ struct response handle_request(string& request) {
     int length = snprintf(NULL, 0, error_format, header, header, error);
     // don't include null byte
     result.headers["Content-Length"] = std::to_string(length - 1);
-    result.length = length - 1;
-    result.body = (char*)malloc(length);
-    snprintf(result.body, length, error_format, header, header, error);
+    if (line.method != HEAD) {
+        result.length = length - 1;
+        result.body = (char*)malloc(length);
+        snprintf(result.body, length, error_format, header, header, error);
+    } else {
+        result.body = NULL;
+        result.length = 0;
+    }
   }
   add_default_headers(result.headers);
   return {
