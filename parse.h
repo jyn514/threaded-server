@@ -8,6 +8,7 @@ enum method {
 struct request_info {
   enum method method;
   std::string url;
+  std::string version;
 };
 
 struct request_info process_request_line(std::string&);

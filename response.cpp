@@ -186,6 +186,7 @@ struct response handle_request(string& request) {
     headers_to_string(result.headers),
     result.body,
     result.length,
-    result.is_mmapped
+    result.is_mmapped,
+    line.version != "HTTP/1.0"
   };
 }
