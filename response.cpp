@@ -22,7 +22,7 @@ extern string current_dir;
 
 enum response_code {
   OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
-  NOT_IMPLEMENTED
+  NOT_IMPLEMENTED, FORBIDDEN
 };
 
 struct internal_response {
@@ -53,6 +53,8 @@ static inline const char *make_header(const enum response_code code) {
       return "400 Bad Request";
     case NO_CONTENT:
       return "204 No Content";
+    case FORBIDDEN:
+      return "403 Forbidden";
     case NOT_FOUND:
       return "404 Not Found";
     case TRY_AGAIN:
@@ -105,6 +107,9 @@ static void get_file(const char *const filename, struct internal_response& info)
       info.code = TRY_AGAIN;
       info.headers["Retry-After"] = std::to_string(1);
       return;
+    } else if (errno == EACCES) {
+      info.code = FORBIDDEN;
+      return;
     }
     info.code = INTERNAL_ERROR;
     perror("Could not open file");
@@ -142,6 +147,8 @@ static void handle_url(struct request_info& info,
   if (errno == ENOENT) {
     result.code = NOT_FOUND;
     return;
+  } else if (errno == EACCES) {
+    result.code = FORBIDDEN;
   } else if (error) { // haven't handled this specifically, let realpath do it
     perror("stat failed");
   }
