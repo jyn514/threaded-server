@@ -28,6 +28,10 @@ ROOT=$(realpath $(dir $(MAKEFILE)))
 .PHONY: all
 all: $(BUILD_DIR)/main
 
+.PHONY: test
+test: test.bats
+	bats $^
+
 $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o) lib/libmagic.so
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
