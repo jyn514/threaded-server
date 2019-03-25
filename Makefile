@@ -38,7 +38,7 @@ $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o) lib/libm
 $(BUILD_DIR):
 	mkdir -p $@
 
-$(BUILD_DIR)/%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 $(BUILD_DIR)/main.o: response.h
