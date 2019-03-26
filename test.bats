@@ -1,5 +1,6 @@
 setup () {
   PORT=$(( $RANDOM + 1000 ))
+  mkdir -p test
   make BUILD_DIR=test >/dev/null 2>&1
   # this is ugly but required:
   # https://github.com/bats-core/bats-core#file-descriptor-3-read-this-if-bats-hangs
