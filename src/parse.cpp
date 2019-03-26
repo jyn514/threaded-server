@@ -1,3 +1,9 @@
+/* Copyright 2019 Joshua Nelson
+ * This program is licensed under the BSD 3-Clause License.
+ * See LICENSE.txt or https://opensource.org/licenses/BSD-3-Clause for details.
+ *
+ * Parser. Parses HTTP method and headers and removes them from the request.
+ */
 #include <fstream>
 #include "lib/magic.h"
 #include "parse.h"

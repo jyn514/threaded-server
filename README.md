@@ -15,9 +15,11 @@ usage: ./main [<port>] [<host>]
 I'm taking networking and operating systems courses where we don't write any code.
 I thought it would be nice to get hands-on in system internals.
 
+## Licensing
+This project is licensed under the BSD 3-Clause license. See LICENSE.txt for details.
+
 ## TODO
 - Figure out why -fsanitize=thread thinks my interrupt handler isn't safe
-- Return headers (Server, Date, Content-Type, etc.)
 - Check what happens if we run into the thread limit
 (currently, we spawn a thread for every request no matter how many threads we already have)
 - Figure out why `sleep(10)` in `handle_request` adds a response time of 18 seconds

@@ -1,3 +1,10 @@
+/* Copyright 2019 Joshua Nelson
+ * This program is licensed under the BSD 3-Clause License.
+ * See LICENSE.txt or https://opensource.org/licenses/BSD-3-Clause for details.
+ *
+ * Responder. Given a request string,
+ * performs all application logic to create a response.
+ */
 #include <iostream>
 #include <sstream>
 #include <vector>
