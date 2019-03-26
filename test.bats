@@ -78,7 +78,8 @@ content_size () {
 
 @test "Content-Length for HEAD is accurate" {
   > test/blah
-  [ "$(content_size "$(curl_status blah)")" = 0 ];
+  run curl /blah -I
+  [ "$(content_size "$output")" = 0 ];
 }
 
 teardown () {
