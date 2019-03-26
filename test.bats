@@ -83,6 +83,13 @@ content_size () {
   [ "$(content_size "$output")" = 0 ];
 }
 
+@test "Resolves subdirectories" {
+  mkdir test/subdir
+  echo hi > test/subdir/blah
+  run curl /subdir/blah -I
+  [ "$(content_size "$output")" = 3 ];
+}
+
 teardown () {
   # TODO: this is really hacky
   killall main
