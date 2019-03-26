@@ -84,7 +84,7 @@ content_size () {
 }
 
 @test "Resolves subdirectories" {
-  mkdir test/subdir
+  mkdir -p test/subdir
   echo hi > test/subdir/blah
   run curl /subdir/blah -I
   [ "$(content_size "$output")" = 3 ];
