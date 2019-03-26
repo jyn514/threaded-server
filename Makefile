@@ -32,7 +32,7 @@ all: $(BUILD_DIR)/main
 test: test.bats
 	bats $^
 
-$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o) lib/libmagic.so
+$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o) lib/libmagic.so lib/libmagic.a
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
 $(BUILD_DIR):
