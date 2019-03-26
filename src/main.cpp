@@ -121,7 +121,11 @@ int main(int argc, char *argv[]) {
 
   /* register interrupt handler to close the socket */
   struct sigaction handler;
+  sigset_t set;
+  sigemptyset(&set);
   handler.sa_handler = &cleanup;
+  handler.sa_flags = 0;
+  handler.sa_mask = set;
   if (sigaction(SIGINT, &handler, NULL) != 0) {
     perror("Failed to register SIGINT handler, quitting");
     exit(1);
