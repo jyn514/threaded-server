@@ -115,7 +115,8 @@ static void get_file(const char *const filename, struct internal_response& info)
     perror("Could not open file");
     return;
   }
-  info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
+  if (info.length == 0) info.body = NULL;
+  else info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
   if (info.body != MAP_FAILED) {
     // this is a hack: the memory will stay mapped and
     // we don't have to worry about closing the file later.
