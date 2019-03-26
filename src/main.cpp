@@ -61,7 +61,7 @@ void *respond(void *arg) {
     if (result.is_mmapped) munmap(result.body, result.length);
     else free(result.body);
 
-    if (!result.persist_connection) break;
+    if (interrupted || !result.persist_connection) break;
   }
 
   close(client_sock);
