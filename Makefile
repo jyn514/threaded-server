@@ -29,11 +29,14 @@ ROOT=$(realpath $(dir $(MAKEFILE)))
 all: $(BUILD_DIR)/main
 
 .PHONY: test
+test: export BUILD_DIR=tmp
+test: export CFLAGS=-fcolor-diagnostics
 test: test.bats
 	bats $^
+	cpplint src/*.cpp
 
-$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o) lib/libmagic.so
-	$(CXX) $(CXXFLAGS) $^ -o $@
+$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o utils.o) lib/libmagic.so
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(BUILD_DIR):
 	mkdir -p $@
@@ -41,9 +44,13 @@ $(BUILD_DIR):
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $< -c -o $@
 
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $< -c -o $@
+
 $(BUILD_DIR)/main.o: response.h
-$(BUILD_DIR)/response.o: response.h parse.h
-$(BUILD_DIR)/parse.o: parse.h
+$(BUILD_DIR)/response.o: response.h parse.h dict.h utils.h
+$(BUILD_DIR)/parse.o: parse.h dict.h utils.h
+$(BUILD_DIR)/dict.o: dict.h
 
 .PHONY: clean
 clean:
