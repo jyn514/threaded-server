@@ -17,7 +17,7 @@ override CFLAGS += -pthread -I.
 
 override CXXFLAGS += $(CFLAGS)
 
-BUILD_DIR = build
+BUILD_DIR ?= build
 SRC_DIR = src
 
 VPATH = $(SRC_DIR)
@@ -29,11 +29,11 @@ ROOT=$(realpath $(dir $(MAKEFILE)))
 all: $(BUILD_DIR)/main
 
 .PHONY: test
-test: export BUILD_DIR=tmp
-test: export CFLAGS=-fcolor-diagnostics
+test: export BUILD_DIR = tmp
 test: test.bats
+	$(MAKE)
 	bats $^
-	cpplint src/*.cpp
+	cpplint src/*.c
 
 $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o utils.o) lib/libmagic.so
 	$(CC) $(CFLAGS) $^ -o $@
