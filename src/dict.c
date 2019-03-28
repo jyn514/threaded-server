@@ -49,7 +49,7 @@ char *dict_get(DICT dict, const char *key) {
     debug1("get: p %s NULL\n", p == NULL ? "==" : "!=");
     while (p != NULL && strcmp(key, p->key))
         p = p->next;
-    return p->value;
+    return p == NULL ? NULL : p->value;
 }
 
 void dict_free(DICT dict) {
