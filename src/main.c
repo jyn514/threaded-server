@@ -4,10 +4,12 @@
  *
  * Main program. Opens sockets, launches threads, and performs initialization.
  */
-#include <iostream>
-#include <string>
+#include <errno.h>
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -21,6 +23,7 @@
 #include <poll.h>
 
 #include "response.h"
+#include "parse.h"
 
 // 2**16 - 1
 #define MAX_PORT 65535
@@ -28,11 +31,10 @@
 // milliseconds
 #define TIMEOUT 30000
 
-using std::string;
-
 static int sockfd;
-volatile static sig_atomic_t interrupted = 0;
-string current_dir;
+static volatile sig_atomic_t interrupted = 0;
+char *current_dir;
+DICT mimetypes;
 
 void *respond(void *arg) {
   int client_sock = (long)arg;
@@ -41,9 +43,9 @@ void *respond(void *arg) {
     perror("Could not get number of bytes");
     return NULL;
   }
-  std::cout << "got new socket connection: " << client_sock
-   << " with num bytes " << bytes << '\n';
-  string BUF(SOCKET_BUF_SIZE, 0);
+
+  printf("got new socket connection %d with %d bytes\n", client_sock, bytes);
+  char BUF[SOCKET_BUF_SIZE];
 
   struct pollfd fds = {client_sock, POLL_IN, 0};
 
@@ -53,19 +55,21 @@ void *respond(void *arg) {
     if (received < 0) {
       perror("Receive failed");
       return NULL;
-    } else if (received == 0) { // connection closed
+    } else if (received == 0) {  // connection closed
       return NULL;
     }
-    BUF.resize(received);
+    //BUF.resize(received);
     struct response result = handle_request(BUF);
-    if (send(client_sock, &result.status[0], result.status.size(), 0) < 0
-        || send(client_sock, &result.headers[0], result.headers.size(), 0) < 0
+    if (send(client_sock, result.status, strlen(result.status), 0) < 0
+        || send(client_sock, result.headers, strlen(result.headers), 0) < 0
         || send(client_sock, result.body, result.length, 0) < 0) {
       if (errno != EPIPE) perror("Failed to send data through socket");
     }
-    BUF.resize(SOCKET_BUF_SIZE);
-    if (result.is_mmapped) munmap(result.body, result.length);
-    else free(result.body);
+    //BUF.resize(SOCKET_BUF_SIZE);
+    if (result.is_mmapped)
+        munmap(result.body, result.length);
+    else
+        free(result.body);
 
     if (interrupted || !result.persist_connection) break;
   }
@@ -87,7 +91,7 @@ void cleanup(int ignored) {
 int main(int argc, char *argv[]) {
   if (argc > 3 || (argc == 2 &&
       (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0))) {
-    std::cerr << "usage: " << argv[0] << " [<port>] [<host>]\n";
+    fprintf(stderr, "usage: %s [<port>] [<host>]\n", argv[0]);
     exit(1);
   }
   // by pure chance, strtol returns 0 if the entire string is invalid
@@ -96,7 +100,8 @@ int main(int argc, char *argv[]) {
   // will be accepted
   const int port = argc > 1 ? strtol(argv[1], NULL, 0) : 80;
   if (port < 1 || port > MAX_PORT) {
-    std::cerr << "invalid port number: port must be between 1 and " << MAX_PORT << '\n';
+    fprintf(stderr,
+            "invalid port number: port must be between 1 and %d\n", MAX_PORT);
     exit(1);
   }
   const char *addr = argc > 2 ? argv[2] : "0.0.0.0";
@@ -108,14 +113,16 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   current_dir = temp;
-  current_dir += '/';
+
+  /* read mimetypes */
+  mimetypes = get_all_mimetypes();
 
   /* initialize socket */
   struct sockaddr_in addrport;
   addrport.sin_family = AF_INET;
   addrport.sin_port = htons(port);
   if (inet_aton(addr, &addrport.sin_addr) == 0) {
-    std::cerr << "Invalid hostname " << addr << '\n';
+    fprintf(stderr, "Invalid hostname '%s'\n", addr);
     exit(1);
   }
 

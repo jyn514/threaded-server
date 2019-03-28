@@ -5,27 +5,21 @@
  * Responder. Given a request string,
  * performs all application logic to create a response.
  */
-#include <iostream>
-#include <sstream>
-#include <vector>
-#include <string>
-#include <map>
-#include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include <string.h>
+#include <stdarg.h>
 
 #include "response.h"
 #include "parse.h"
+#include "dict.h"
+#include "utils.h"
 
-using std::map;
-using std::vector;
-using std::string;
-
-extern string current_dir;
+extern char *current_dir;
 
 enum response_code {
   OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
@@ -34,13 +28,13 @@ enum response_code {
 
 struct internal_response {
   enum response_code code;
-  map<string, string> headers;
+  DICT headers;
   int length;
   bool is_mmapped;
   char *body;  // NOT a string, might not be null terminated
 };
 
-static inline string make_date(time_t t);
+static inline char *make_date(time_t t);
 
 static const char *index_page = "index.html",
                   *server_agent = "crappy_server/0.0.1",
@@ -53,7 +47,7 @@ static const char *index_page = "index.html",
 "</body></html>\r\n";
 
 static inline const char *make_header(const enum response_code code) {
-  switch(code) {
+  switch (code) {
     case OK:
       return "200 OK";
     case BAD_REQUEST:
@@ -73,46 +67,64 @@ static inline const char *make_header(const enum response_code code) {
   }
 }
 
-static inline string headers_to_string(const map<string, string>& headers) {
-  string result;
-  for (auto const &entry : headers) {
-    result += entry.first + ": " + entry.second + "\r\n";
-  }
-  return result + "\r\n";
+static void update_result(const char *const key, const char *const val, ...) {
+  va_list args;
+  va_start(args, val);
+  char *result = va_arg(args, char*);
+  int result_len = strlen(result);
+  int header_len = snprintf(NULL, 0, "%s: %s\r\n", key, val) + 1;
+  char buf[header_len];
+  snprintf(buf, header_len, "%s: %s\r\n", key, val);
+
+  result = (char*)realloc(result, result_len + header_len);
+  strcat(&result[result_len], buf);
 }
 
-static inline const string make_header_line(const enum response_code code) {
-  return string("HTTP/1.1 ") + make_header(code) + "\r\n";
+static inline char *headers_to_string(DICT headers) {
+  char *result = "";
+  dict_foreach(headers, update_result, result);
+  int len = strlen(result);
+  result = (char*)realloc(result, len + 2);
+  return strcat(&result[len], "\r\n");
 }
 
-static inline void add_default_headers(map<string,string>& headers) {
-  headers["Date"] = make_date(time(NULL));
-  headers["Server"] = server_agent;
+static inline char *const make_header_line(const enum response_code code) {
+  const char *header = make_header(code);
+  int len = strlen(header);
+  char *buf = (char*)malloc(len + 11);
+  snprintf(buf, len + 11, "HTTP/1.1 %s\r\n", header);
+  return buf;
 }
 
-static inline string make_date(const time_t t) {
+static inline void add_default_headers(DICT headers) {
+  dict_put(headers, "Date", make_date(time(NULL)));
+  dict_put(headers, "Server", strdup(server_agent));
+}
+
+static inline char *make_date(const time_t t) {
   //  %a: 3, %d: 2, %b: 3, %Y: 4, %H: 2, %M: 2, %S: 2
   //  3 + 2 + 2 + 1 + 3 + 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 + 4 = 29
   //  lets double it, why not
-  static const int len = 60;
-  char date[len];
+#define LEN 60
+  char *date = (char*)malloc(LEN);
   struct tm *current_time = localtime(&t);
   if (current_time == NULL) {
     perror("Failed to get current time");
-    return string();
+    return "";
   }
-  strftime(date, len, "%a, %d %b %Y %H:%M:%S GMT", current_time);
-  return string(date);
+  strftime(date, LEN, "%a, %d %b %Y %H:%M:%S GMT", current_time);
+  return date;
+#undef LEN
 }
 
-static void get_file(const char *const filename, struct internal_response& info) {
-
+static void get_file(const char *const filename,
+                     struct internal_response& info) {
   int fd = open(filename, O_RDONLY);
   if (fd == -1) {
     // TODO: set up a semaphore and wait until we can open the file
     if (errno == EMFILE) {
       info.code = TRY_AGAIN;
-      info.headers["Retry-After"] = std::to_string(1);
+      dict_put(info.headers, "Retry-After", "1");
       return;
     } else if (errno == EACCES) {
       info.code = FORBIDDEN;
@@ -122,8 +134,11 @@ static void get_file(const char *const filename, struct internal_response& info)
     perror("Could not open file");
     return;
   }
-  if (info.length == 0) info.body = NULL;
-  else info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
+  if (info.length == 0) {
+      info.body = NULL;
+  } else {
+      info.body = (char*)mmap(NULL, info.length, PROT_READ, MAP_SHARED, fd, 0);
+  }
   if (info.body != MAP_FAILED) {
     // this is a hack: the memory will stay mapped and
     // we don't have to worry about closing the file later.
@@ -131,7 +146,7 @@ static void get_file(const char *const filename, struct internal_response& info)
     close(fd);
     info.code = OK;
     info.is_mmapped = true;
-    info.headers["Content-Type"] = get_mimetype(filename);
+    dict_put(info.headers, "Content-Type", strdup(get_mimetype(filename)));
     return;
   }
   perror("Could not mmap file");
@@ -139,67 +154,67 @@ static void get_file(const char *const filename, struct internal_response& info)
 }
 
 static void handle_url(struct request_info& info,
-                const map<string,string>& headers,
+                const DICT headers,
                 struct internal_response& result) {
   struct stat stat_info;
   int error;
   // treat leading / as ./. Has the side effect of preventing path traversal
-  info.url = "." + info.url;
-  if ((error = stat(info.url.c_str(), &stat_info)) == 0
+  int dir_len = strlen(current_dir),
+      file_len = strlen(info.url) + dir_len;
+  char *file = strcat(strdup(current_dir), info.url);
+
+  if ((error = stat(file, &stat_info)) == 0
       && S_ISDIR(stat_info.st_mode)) {
     // requested a subdirectory with no trailing slash
-    if (info.url.back() != '/') info.url += '/';
-    info.url += index_page;
-    error = stat(info.url.c_str(), &stat_info);
+    if (file[file_len] != '/') {
+        file = (char*)realloc(file, ++file_len + 1);
+        file[file_len] = '/';
+    }
+    file = realloc(file, file_len + strlen(index_page) + 1);
+    strcat(file, index_page);
+    error = stat(file, &stat_info);
   }
+
   if (errno == ENOENT) {
     result.code = NOT_FOUND;
     return;
   } else if (errno == EACCES) {
     result.code = FORBIDDEN;
-  } else if (error) { // haven't handled this specifically, let realpath do it
+  } else if (error) {
     perror("stat failed");
   }
-  char *path = realpath((current_dir + info.url).c_str(), NULL);
-  if (path == NULL) {
-    result.code = NOT_FOUND;
-    return;
-  }
+
   result.length = stat_info.st_size;
-  get_file(path, result);
+  get_file(file, result);
+  free(file);
   if (info.method == HEAD && result.code == OK) {
     munmap(result.body, result.length);
     result.body = NULL;
     result.length = 0;
   }
-  result.headers["Content-Length"] = std::to_string(stat_info.st_size);
-  result.headers["Last-Modified"] = make_date(stat_info.st_mtim.tv_sec);
-  free(path);
+  dict_put(result.headers, "Content-Length", ltoa(stat_info.st_size));
+  dict_put(result.headers, "Last-Modified", make_date(stat_info.st_mtim.tv_sec));
 }
 
-struct response handle_request(string& request) {
-  // cerr is thread-safe PER CALL, so multiple << operators may be reordered
-  std::cerr << request;
+struct response handle_request(char *request) {
   struct request_info line = process_request_line(request);
-  std::stringstream log;
-  log << "Parsed url as " << line.url << '\n';
-  std::cerr << log.str();
-
   struct internal_response result;
   result.is_mmapped = false;
-  if (line.method == ERROR) result.code = BAD_REQUEST;
-  else if (line.method == NOT_RECOGNIZED) result.code = NOT_IMPLEMENTED;
-  else {
-      map<string, string> headers = process_headers(request);
-      handle_url(line, headers, result);
+  if (line.method == ERROR) {
+    result.code = BAD_REQUEST;
+  } else if (line.method == NOT_RECOGNIZED) {
+    result.code = NOT_IMPLEMENTED;
+  } else {
+    DICT headers = process_headers(request);
+    handle_url(line, headers, result);
   }
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
          *header = make_header(result.code);
-    result.headers["Content-Type"] = "text/html; charset=utf-8";
+    dict_put(result.headers, "Content-Type", "text/html; charset=utf-8");
     int length = snprintf(NULL, 0, error_format, header, header, error);
     // don't include null byte
-    result.headers["Content-Length"] = std::to_string(length - 1);
+    dict_put(result.headers, "Content-Length", itoa(length - 1));
     if (line.method != HEAD) {
         result.length = length - 1;
         result.body = (char*)malloc(length);
