@@ -152,6 +152,7 @@ static void get_file(const char *const filename,
     close(fd);
     info->code = OK;
     info->is_mmapped = true;
+    info->headers = dict_init();
     dict_put(info->headers, "Content-Type", strdup(get_mimetype(filename)));
     return;
   }
@@ -163,9 +164,8 @@ static void handle_url(struct request_info *info,
                 const DICT headers,
                 struct internal_response *result) {
   struct stat stat_info;
-  int error;
-  // treat leading / as ./. Has the side effect of preventing path traversal
-  int dir_len = strlen(current_dir),
+  int error,
+      dir_len = strlen(current_dir),
       file_len = strlen(info->url) + dir_len;
   char *file = strcat(strdup(current_dir), info->url);
 
