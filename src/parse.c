@@ -13,7 +13,6 @@
 #include "dict.h"
 #include "utils.h"
 
-static const char *line_delim = "\r\n";
 extern DICT mimetypes;
 
 const char *get_mimetype(const char *const filename) {
@@ -48,67 +47,52 @@ DICT get_all_mimetypes(void) {
       return result;
   char *line = NULL;
   while (getline(&line, 0, mime_database) && line != NULL) {
-    char *type_end, *ext_start;
-    if (line[0] == '#'
-        || (type_end = strchr(line, '\t')) == NULL) continue;
-    ext_start = type_end;
-
-    // discard whitespace
-    while (isspace(*++ext_start)) {}
-    dict_put(result, substr(ext_start, strlen(ext_start) - (type_end-line) - 1),
-        substr(line, type_end - line));
+    char *mimetype, *ext;
+    if (line[0] == '#') continue;
+    if (sscanf(line, "%ms\t%ms", &mimetype, &ext)) {
+        dict_put(result, ext, mimetype);
+    }
     free(line);
   }
+  fclose(mime_database);
   return result;
 }
 
-struct request_info process_request_line(const char **request) {
-  struct request_info result = {GET, "", "HTTP/1.0"};
+int process_request_line(const char *const request, struct request_info *result) {
   char *method;
   int read, matched;
-  matched = sscanf(*request, "%ms %ms %ms\r\n%n",
-      &method, &result.url, &result.version, &read);
+  matched = sscanf(request, "%ms %ms %ms\r\n%n",
+      &method, &result->url, &result->version, &read);
 
   if (matched < 2) {
-    result.method = ERROR;
-    return result;
+    result->method = ERROR;
+    return read;
+  } else if (matched == 2) {  // no version sent
+    result->version = "HTTP/1.0";
   }
 
   if (strcmp(method, "HEAD") == 0) {
     // do everything exactly the same as a GET, but main will not send the data
     // this catches access errors to files
-    result.method = HEAD;
-  } else if (strcmp(method, "GET") != 0) {
-    result.method = NOT_RECOGNIZED;
-    return result;
+    result->method = HEAD;
+  } else if (strcmp(method, "GET") == 0) {
+    result->method = GET;
+  } else {
+    result->method = NOT_RECOGNIZED;
   }
 
-  *request += read;
-  return result;
+  return read;
 }
 
-DICT process_headers(const char **request) {
-  DICT headers = dict_init();
-  char *start = *request, *name_end, *stop;
-  char *line, *header, *body;
+int process_headers(const char *const request, DICT headers) {
+  char *header, *body;
+  int read, ret = 0;
 
   // for every line
-  while ((stop = strstr(start, line_delim)) != NULL) {
-    line = substr(start, stop - start);
-    //line = request.substr(start, stop - start);
-    if (strcmp(line, "") == 0) break;  // end of headers
-    // find where header name stops
-    name_end = strchr(line, ':');
-    header = substr(line, name_end - line);
-
-    // discard colon and whitespace
-    while (isspace(*++name_end)) {}
-    body = substr(name_end, stop - start);
-
-    // replaces existing entries
+  while ((sscanf(request, "%ms: %ms\r\n%n",
+                           &header, &body, &read)) == 2) {
     dict_put(headers, header, body);
-    start = stop + 2;  // skip over \r\n
+    ret += read;
   }
-  *request = stop;
-  return headers;
+  return ret;
 }
