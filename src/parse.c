@@ -32,9 +32,9 @@ const char *get_mimetype(const char *const filename) {
     exit(1);
   }
 
-  const char *result = magic_file(cookie, filename);
+  char *result = strdup(magic_file(cookie, filename));
   // assume this never changes while the server is running
-  dict_put(mimetypes, strdup(ext), strdup(result));
+  dict_put(mimetypes, strdup(ext), result);
   magic_close(cookie);
   return result;
 }
@@ -63,20 +63,17 @@ DICT get_all_mimetypes(void) {
 }
 
 struct request_info process_request_line(const char **request) {
-  char *line_end = strstr(*request, line_delim), *method_end, *url_end;
   struct request_info result = {GET, "", "HTTP/1.0"};
+  char *method;
+  int read, matched;
+  matched = sscanf(*request, "%ms %ms %ms\r\n%n",
+      &method, &result.url, &result.version, &read);
 
-  if (line_end == NULL) {
+  if (matched < 2) {
     result.method = ERROR;
     return result;
   }
-  char *request_line = substr(*request, line_end - *request);
-  /* parse METHOD */
-  if ((method_end = strchr(request_line, ' ')) == NULL) {
-    result.method = ERROR;
-    return result;
-  }
-  char *method = substr(request_line, method_end - request_line);
+
   if (strcmp(method, "HEAD") == 0) {
     // do everything exactly the same as a GET, but main will not send the data
     // this catches access errors to files
@@ -86,15 +83,7 @@ struct request_info process_request_line(const char **request) {
     return result;
   }
 
-  /* parse url */
-  url_end = strchr(method_end + 1, ' ');
-  if (url_end == NULL) {  // no http.version
-    result.url = substr(request_line, method_end - request_line + 1);
-  } else {
-    result.url = substr(method_end + 1, url_end-method_end + 1);
-    result.version = url_end + 1;
-  }
-  *request = line_end + 2;
+  *request += read;
   return result;
 }
 
