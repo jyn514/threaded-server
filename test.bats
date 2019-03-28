@@ -1,17 +1,19 @@
-setup () {
-  PORT=$(( $RANDOM + 1000 ))
-  mkdir -p test
-  make BUILD_DIR=test >/dev/null 2>&1
-  # this is ugly but required:
-  # https://github.com/bats-core/bats-core#file-descriptor-3-read-this-if-bats-hangs
-  cd test && ./main $PORT >/dev/null 2>&1 3>&- &
-  PID=$!
-}
+# http://redsymbol.net/articles/unofficial-bash-strict-mode/
+# requires bats >= 1.0.0 (https://github.com/bats-core/bats-core)
+set -euo pipefail
 
 # utilities
 
 debug () {
-  echo "$@" >&3
+  sed 's/^/# /' >&3
+}
+
+debug_cmd () {
+  stderr "$@" | debug
+}
+
+stderr () {
+  "$@" 2>&1 >/dev/null
 }
 
 curl () {
@@ -29,11 +31,17 @@ content_size () {
   sed 's/Content-Length: //; s/\s//g'
 }
 
-# tests
+# runs before each test
 
-@test "server compiles" {
-  make BUILD_DIR=test
+setup () {
+  PORT=$(( $RANDOM + 1000 ))
+  # this is ugly but required:
+  # https://github.com/bats-core/bats-core#file-descriptor-3-read-this-if-bats-hangs
+  cd $BUILD_DIR && ./main $PORT >/dev/null &
+  PID=$!
 }
+
+# tests
 
 @test "serves files" {
   for file in index.html hey how are you; do
