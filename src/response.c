@@ -203,24 +203,26 @@ static void handle_url(struct request_info *info,
 }
 
 struct response handle_request(const char *request) {
-  struct request_info line = process_request_line(&request);
+  struct request_info line;
   struct internal_response result;
+  request += process_request_line(request, &line);
   result.is_mmapped = false;
   if (line.method == ERROR) {
     result.code = BAD_REQUEST;
   } else if (line.method == NOT_RECOGNIZED) {
     result.code = NOT_IMPLEMENTED;
   } else {
-    DICT headers = process_headers(&request);
+    DICT headers = dict_init();
+    request += process_headers(request, headers);
     handle_url(&line, headers, &result);
+    dict_free(headers);
   }
   result.headers = dict_init();
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
-         *header = make_header(result.code);
+               *header = make_header(result.code);
     dict_put(result.headers, "Content-Type", "text/html; charset=utf-8");
     int length = snprintf(NULL, 0, error_format, header, header, error);
-    // don't include null byte
     dict_put(result.headers, "Content-Length", itoa(length));
     if (line.method != HEAD) {
         result.length = length;
