@@ -11,6 +11,20 @@ $ ./main -h
 usage: ./main [<port>] [<host>]
 ```
 
+## Testing
+### Dependencies
+- [clang-tidy](https://clang.llvm.org/extra/clang-tidy/)
+- [cppcheck](https://sourceforge.net/p/cppcheck/wiki/Home/)
+- [bats](https://github.com/bats-core/bats-core/)
+
+### Running Tests
+`make test`
+
+### Optional
+`valgrind --leak-check=full build/main 8080`
+
+Run a few queries and see if there's any memory leaks.
+
 ## But Why?
 I'm taking networking and operating systems courses where we don't write any code.
 I thought it would be nice to get hands-on in system internals.
