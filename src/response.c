@@ -13,11 +13,6 @@
 #include <time.h>
 #include <string.h>
 
-#include <sys/param.h>
-#ifndef BSD
-#include <bsd/string.h>
-#endif
-
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -28,10 +23,10 @@
 #include "utils.h"
 
 #define append(str, other) { {\
-    int len__ = strlen(str) + strlen(other) + 1; \
-    char *tmp = realloc(str, len__); \
+    int str_len__ = strlen(str), other_len__ = strlen(other); \
+    char *tmp = realloc(str, str_len__ + other_len__ + 1); \
     if (tmp == NULL) perror("append: realloc failed"); \
-    else { str = tmp; strlcat(str, other, len__); } \
+    else { str = tmp; strncat(str, other, other_len__); } \
 } }
 
 extern char *current_dir;
