@@ -175,7 +175,7 @@ static void handle_url(struct request_info *info,
     append(result->headers, "Content-Length: ");
     append(result->headers, ltoa(stat_info.st_size));
     append(result->headers, "\r\nLast-Modified: ");
-    add_date(&result->headers, stat_info.st_mtim.tv_sec);
+    add_date(&result->headers, stat_info.st_mtime);
     append(result->headers, "\r\n");
   }
 }
