@@ -12,7 +12,12 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+
+#include <sys/param.h>
+#ifndef BSD
 #include <bsd/string.h>
+#endif
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
