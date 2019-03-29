@@ -65,6 +65,7 @@ int process_request_line(const char *const request, struct request_info *result)
 
   if (matched < 2) {
     result->method = ERROR;
+    if (matched == 1) free(method);
     return read;
   } else if (matched == 2) {  // no version sent
     result->version = "HTTP/1.0";
@@ -80,6 +81,7 @@ int process_request_line(const char *const request, struct request_info *result)
     result->method = NOT_RECOGNIZED;
   }
 
+  free(method);
   return read;
 }
 

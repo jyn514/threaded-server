@@ -22,6 +22,13 @@
 #include "dict.h"
 #include "utils.h"
 
+#define append(str, other) { {\
+    int len__ = strlen(str) + strlen(other) + 1; \
+    char *tmp = realloc(str, len__); \
+    if (tmp == NULL) perror("append: realloc failed"); \
+    else { str = tmp; strlcat(str, other, len__); } \
+} }
+
 extern char *current_dir;
 
 enum response_code {
@@ -31,13 +38,11 @@ enum response_code {
 
 struct internal_response {
   enum response_code code;
-  DICT headers;
   int length;
   bool is_mmapped;
+  char *headers;
   char *body;  // NOT a string, might not be null terminated
 };
-
-static inline char *make_date(time_t t);
 
 static const char *index_page = "index.html",
                   *server_agent = "crappy_server/0.0.1",
@@ -70,59 +75,27 @@ static inline const char *make_header(const enum response_code code) {
   }
 }
 
-static void update_result(const char *const key, const char *const val, va_list args) {
-  char **result = va_arg(args, char**);
-
-  int header_len = snprintf(NULL, 0, "%s: %s\r\n", key, val) + 1;
-  char buf[header_len];
-  snprintf(buf, header_len, "%s: %s\r\n", key, val);
-
-  if (*result == NULL) {
-    *result = memcpy(malloc(header_len), buf, header_len);
-  } else {
-    int result_len = strlen(*result);
-    *result = realloc(*result, result_len + header_len);
-    //strcat(&(*result)[result_len], buf);
-    strlcat(*result, buf, result_len + header_len);
-  }
-}
-
-static inline char *headers_to_string(DICT headers) {
-  char *result = NULL;
-  dict_foreach(headers, update_result, &result);
-  int len = strlen(result);
-  result = realloc(result, len + 3);
-  strlcat(result, "\r\n", len + 3);
-  return result;
-}
-
 static inline char *make_header_line(const enum response_code code) {
   const char *header = make_header(code);
   int len = strlen(header);
-  char *buf = malloc(len + 11);
-  snprintf(buf, len + 11, "HTTP/1.1 %s\r\n", header);
+  char *buf = malloc(len + 12);
+  snprintf(buf, len + 12, "HTTP/1.1 %s\r\n", header);
   return buf;
 }
 
-static inline void add_default_headers(DICT headers) {
-  dict_put(headers, "Date", make_date(time(NULL)));
-  dict_put(headers, "Server", strdup(server_agent));
-}
-
-static inline char *make_date(const time_t t) {
+static inline void add_date(char **str, const time_t t) {
   //  %a: 3, %d: 2, %b: 3, %Y: 4, %H: 2, %M: 2, %S: 2
   //  3 + 2 + 2 + 1 + 3 + 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 + 4 = 29
   //  lets double it, why not
 #define LEN 60
-  char *date = malloc(LEN);
   struct tm *current_time = localtime(&t);
   if (current_time == NULL) {
     perror("Failed to get current time");
-    free(date);
-    return "";
+    return;
   }
+  char date[LEN];
   strftime(date, LEN, "%a, %d %b %Y %H:%M:%S GMT", current_time);
-  return date;
+  append(*str, date);
 #undef LEN
 }
 
@@ -133,7 +106,7 @@ static void get_file(const char *const filename,
     // TODO: set up a semaphore and wait until we can open the file
     if (errno == EMFILE) {
       info->code = TRY_AGAIN;
-      dict_put(info->headers, "Retry-After", "1");
+      append(info->headers, "Retry-After: 1\r\n");
       return;
     } else if (errno == EACCES) {
       info->code = FORBIDDEN;
@@ -155,8 +128,9 @@ static void get_file(const char *const filename,
     close(fd);
     info->code = OK;
     info->is_mmapped = true;
-    info->headers = dict_init();
-    dict_put(info->headers, "Content-Type", strdup(get_mimetype(filename)));
+    append(info->headers, "Content-Type: ");
+    append(info->headers, get_mimetype(filename));
+    append(info->headers, "\r\n");
     return;
   }
   perror("Could not mmap file");
@@ -167,23 +141,15 @@ static void handle_url(struct request_info *info,
                 const DICT headers,
                 struct internal_response *result) {
   struct stat stat_info;
-  int error,
-      dir_len = strlen(current_dir),
-      file_len = strlen(info->url) + dir_len,
-      index_len = file_len + strlen(index_page);
+  int error;
   char *file = strdup(current_dir);
-  file = realloc(file, file_len + 1);
-  strlcat(file, info->url, file_len + 1);
+  append(file, info->url);
 
   if ((error = stat(file, &stat_info)) == 0
       && S_ISDIR(stat_info.st_mode)) {
     // requested a subdirectory with no trailing slash
-    if (file[file_len] != '/') {
-        file = realloc(file, ++file_len + 1);
-        file[file_len] = '/';
-    }
-    file = realloc(file, index_len + 1);
-    strlcat(file, index_page, index_len + 1);
+    if (file[strlen(file)] != '/') append(file, "/");
+    append(file, index_page);
     error = stat(file, &stat_info);
   }
 
@@ -193,6 +159,8 @@ static void handle_url(struct request_info *info,
     return;
   } else if (errno == EACCES) {
     result->code = FORBIDDEN;
+    free(file);
+    return;
   } else if (error) {
     perror("stat failed");
   }
@@ -204,9 +172,12 @@ static void handle_url(struct request_info *info,
     munmap(result->body, result->length);
     result->body = NULL;
     result->length = 0;
+    append(result->headers, "Content-Length: ");
+    append(result->headers, ltoa(stat_info.st_size));
+    append(result->headers, "\r\nLast-Modified: ");
+    add_date(&result->headers, stat_info.st_mtim.tv_sec);
+    append(result->headers, "\r\n");
   }
-  dict_put(result->headers, "Content-Length", ltoa(stat_info.st_size));
-  dict_put(result->headers, "Last-Modified", make_date(stat_info.st_mtim.tv_sec));
 }
 
 struct response handle_request(const char *request) {
@@ -214,7 +185,7 @@ struct response handle_request(const char *request) {
   struct internal_response result;
   request += process_request_line(request, &line);
   result.is_mmapped = false;
-  result.headers = dict_init();
+  *(result.headers = malloc(1)) = '\0';
 
   if (line.method == ERROR) {
     result.code = BAD_REQUEST;
@@ -229,9 +200,13 @@ struct response handle_request(const char *request) {
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
                *header = make_header(result.code);
-    dict_put(result.headers, "Content-Type", "text/html; charset=utf-8");
+    append(result.headers, "Content-Type: text/html; charset=utf-8\r\n");
     int length = snprintf(NULL, 0, error_format, header, header, error);
-    dict_put(result.headers, "Content-Length", itoa(length));
+    append(result.headers, "Content-Length: ");
+    char *len = itoa(length);
+    append(len, "\r\n");
+    append(result.headers, len);
+    free(len);
     if (line.method != HEAD) {
         result.length = length;
         result.body = malloc(length+1);
@@ -241,14 +216,20 @@ struct response handle_request(const char *request) {
         result.length = 0;
     }
   }
-  add_default_headers(result.headers);
+  append(result.headers, "Date: ");
+  add_date(&result.headers, time(NULL));
+  append(result.headers, "\r\nServer: ");
+  append(result.headers, server_agent);
+  append(result.headers, "\r\n\r\n");
   struct response ret = {
     make_header_line(result.code),
-    headers_to_string(result.headers),
+    result.headers,
     result.body,
     result.length,
     result.is_mmapped,
     strcmp(line.version, "HTTP/1.0") == 0
   };
+  free(line.version);
+  free(line.url);
   return ret;
 }
