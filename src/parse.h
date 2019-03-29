@@ -12,8 +12,8 @@ enum method {
 
 struct request_info {
   enum method method;
-  const char *url;
-  const char *version;
+  char *url;
+  char *version;
 };
 
 DICT get_all_mimetypes(void);

@@ -54,18 +54,18 @@ void *respond(void *arg) {
     int received = recv(client_sock, &BUF[0], SOCKET_BUF_SIZE, 0);
     if (received < 0) {
       perror("Receive failed");
-      return NULL;
+      break;
     } else if (received == 0) {  // connection closed
-      return NULL;
+      break;
     }
-    //BUF.resize(received);
     struct response result = handle_request(BUF);
     if (send(client_sock, result.status, strlen(result.status), 0) < 0
         || send(client_sock, result.headers, strlen(result.headers), 0) < 0
         || send(client_sock, result.body, result.length, 0) < 0) {
       if (errno != EPIPE) perror("Failed to send data through socket");
     }
-    //BUF.resize(SOCKET_BUF_SIZE);
+    free(result.status);
+    free(result.headers);
     if (result.is_mmapped)
         munmap(result.body, result.length);
     else
