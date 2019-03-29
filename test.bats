@@ -45,13 +45,13 @@ setup () {
 
 @test "serves files" {
   for file in index.html hey how are you; do
-    echo hi > test/$file
+    echo hi > $BUILD_DIR/$file
     [ "$(curl $file)" = "hi" ]
   done
 }
 
 @test "resolves directories" {
-  echo hi > test/index.html
+  echo hi > $BUILD_DIR/index.html
   [ "$(curl /)" = "hi" ]
 }
 
@@ -60,18 +60,18 @@ setup () {
 }
 
 @test "returns 404 if not found" {
-  rm -f test/tmp
+  rm -f $BUILD_DIR/tmp
   [ "$(curl_status tmp "$@")" = 404 ]
 }
 
 @test "returns 403 if permission denied" {
-  touch test/not_allowed
-  chmod 000 test/not_allowed
+  touch $BUILD_DIR/not_allowed
+  chmod 000 $BUILD_DIR/not_allowed
   [ "$(curl_status not_allowed "$@")" = 403 ]
 }
 
 @test "supports HEAD" {
-  echo hi > test/index.html
+  echo hi > $BUILD_DIR/index.html
   run curl / -I
   [ "${lines[0]}" = "$(echo -e 'HTTP/1.1 200 OK\r')" ]
   [ "$(content_size "$output")" = 3 ]
@@ -86,14 +86,14 @@ setup () {
 }
 
 @test "Content-Length for HEAD is accurate" {
-  > test/blah
+  > $BUILD_DIR/blah
   run curl /blah -I
   [ "$(content_size "$output")" = 0 ];
 }
 
 @test "Resolves subdirectories" {
-  mkdir -p test/subdir
-  echo hi > test/subdir/blah
+  mkdir -p $BUILD_DIR/subdir
+  echo hi > $BUILD_DIR/subdir/blah
   run curl /subdir/blah -I
   [ "$(content_size "$output")" = 3 ];
 }
