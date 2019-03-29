@@ -7,8 +7,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <magic.h>
 
-#include "lib/magic.h"
 #include "parse.h"
 #include "dict.h"
 #include "utils.h"
