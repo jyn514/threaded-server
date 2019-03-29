@@ -13,6 +13,11 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
+// bsd
+#ifndef IPPROTO_TCP
+#include <netinet/tcp.h>
+#include <netinet/in.h>
+#endif
 /* check available bytes */
 #include <sys/ioctl.h>
 /* mmap */
