@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#include <bsd/string.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -82,7 +83,7 @@ static void update_result(const char *const key, const char *const val, va_list 
     int result_len = strlen(*result);
     *result = realloc(*result, result_len + header_len);
     //strcat(&(*result)[result_len], buf);
-    strcat(*result, buf);
+    strlcat(*result, buf, result_len + header_len);
   }
 }
 
@@ -90,8 +91,9 @@ static inline char *headers_to_string(DICT headers) {
   char *result = NULL;
   dict_foreach(headers, update_result, &result);
   int len = strlen(result);
-  result = realloc(result, len + 2);
-  return strcat(&result[len], "\r\n");
+  result = realloc(result, len + 3);
+  strlcat(result, "\r\n", len + 3);
+  return result;
 }
 
 static inline char *make_header_line(const enum response_code code) {
@@ -116,6 +118,7 @@ static inline char *make_date(const time_t t) {
   struct tm *current_time = localtime(&t);
   if (current_time == NULL) {
     perror("Failed to get current time");
+    free(date);
     return "";
   }
   strftime(date, LEN, "%a, %d %b %Y %H:%M:%S GMT", current_time);
@@ -166,8 +169,11 @@ static void handle_url(struct request_info *info,
   struct stat stat_info;
   int error,
       dir_len = strlen(current_dir),
-      file_len = strlen(info->url) + dir_len;
-  char *file = strcat(strdup(current_dir), info->url);
+      file_len = strlen(info->url) + dir_len,
+      index_len = file_len + strlen(index_page);
+  char *file = strdup(current_dir);
+  file = realloc(file, file_len + 1);
+  strlcat(file, info->url, file_len + 1);
 
   if ((error = stat(file, &stat_info)) == 0
       && S_ISDIR(stat_info.st_mode)) {
@@ -176,13 +182,14 @@ static void handle_url(struct request_info *info,
         file = realloc(file, ++file_len + 1);
         file[file_len] = '/';
     }
-    file = realloc(file, file_len + strlen(index_page) + 1);
-    strcat(file, index_page);
+    file = realloc(file, index_len + 1);
+    strlcat(file, index_page, index_len + 1);
     error = stat(file, &stat_info);
   }
 
   if (errno == ENOENT) {
     result->code = NOT_FOUND;
+    free(file);
     return;
   } else if (errno == EACCES) {
     result->code = FORBIDDEN;
@@ -207,6 +214,8 @@ struct response handle_request(const char *request) {
   struct internal_response result;
   request += process_request_line(request, &line);
   result.is_mmapped = false;
+  result.headers = dict_init();
+
   if (line.method == ERROR) {
     result.code = BAD_REQUEST;
   } else if (line.method == NOT_RECOGNIZED) {
@@ -217,7 +226,6 @@ struct response handle_request(const char *request) {
     handle_url(&line, headers, &result);
     dict_free(headers);
   }
-  result.headers = dict_init();
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
                *header = make_header(result.code);

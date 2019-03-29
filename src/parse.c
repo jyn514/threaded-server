@@ -16,10 +16,9 @@
 extern DICT mimetypes;
 
 const char *get_mimetype(const char *const filename) {
-  int ext_start = strchr(filename, '.') - filename;
-  const char *ext = &filename[ext_start],
-        *type = dict_get(mimetypes, ext);
-  if (type != NULL) return type;
+  char *ext = strchr(filename, '.'), *type;
+  if (ext != NULL && (type = dict_get(mimetypes, ++ext)))
+    return type;
 
   // do the expensive libmagic calls
   // initialize libmagic; it's not thread safe so we don't initialize in main
@@ -32,8 +31,8 @@ const char *get_mimetype(const char *const filename) {
   }
 
   char *result = strdup(magic_file(cookie, filename));
-  // assume this never changes while the server is running
-  dict_put(mimetypes, strdup(ext), result);
+  // assume this is the same for all extensions
+  if (ext != NULL) dict_put(mimetypes, strdup(ext), result);
   magic_close(cookie);
   return result;
 }
