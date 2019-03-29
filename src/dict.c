@@ -75,6 +75,7 @@ void dict_foreach(DICT dict, mapfunc func, ...) {
         while (current != NULL) {
             va_copy(actual, args);
             func(current->key, current->value, actual);
+            va_end(actual);
             current = current->next;
         }
     }
