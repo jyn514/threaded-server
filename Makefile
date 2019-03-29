@@ -13,7 +13,7 @@ endif
 override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
 
 # libraries
-override CFLAGS += -pthread -I.
+override CFLAGS += -pthread -lmagic
 
 override CXXFLAGS += $(CFLAGS)
 
@@ -36,7 +36,7 @@ test: test.bats
 	clang-tidy src/*.c
 	cppcheck src/*.c
 
-$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o utils.o) lib/libmagic.so
+$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o utils.o)
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(BUILD_DIR):
