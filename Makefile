@@ -13,7 +13,7 @@ endif
 override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
 
 # libraries
-override CFLAGS += -pthread -I. -lbsd
+override CFLAGS += -pthread -I. $(shell pkg-config --libs libbsd 2>/dev/null)
 
 override CXXFLAGS += $(CFLAGS)
 
