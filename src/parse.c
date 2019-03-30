@@ -51,7 +51,9 @@ DICT get_all_mimetypes(void) {
     if (line[0] != '#' && (n = sscanf(line, "%ms\t%ms\n", &mimetype, &ext)) == 2) {
         dict_put(result, ext, mimetype);
     } else if (n == 1) {
-        free(mimetype);
+        // clang-tidy mistakenly thinks mimetype is uninitialized
+        // it's written to by sscanf above
+        free(mimetype);  // NOLINT
     }
     free(line);
     line = NULL;
