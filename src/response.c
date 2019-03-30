@@ -172,6 +172,8 @@ static void handle_url(struct request_info *info,
     munmap(result->body, result->length);
     result->body = NULL;
     result->length = 0;
+  }
+  if (result->code == OK) {
     append(result->headers, "Content-Length: ");
     append(result->headers, ltoa(stat_info.st_size));
     append(result->headers, "\r\nLast-Modified: ");
