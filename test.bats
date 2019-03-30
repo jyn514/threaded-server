@@ -18,7 +18,7 @@ stderr () {
 
 curl () {
   URL=$1; shift
-  command curl -s "$@" "localhost:$PORT/$URL"
+  command curl -m 1 -s "$@" "localhost:$PORT/$URL"
 }
 
 curl_status () {
@@ -77,6 +77,13 @@ setup () {
   [ "$(content_size "$output")" = 3 ]
 }
 
+@test "Content-Length is accurate" {
+  echo hi > $BUILD_DIR/blah
+  [ "$(content_size "$(curl /blah -i)")" = 3 ]
+  > $BUILD_DIR/empty
+  [ "$(content_size "$(curl /empty -i)")" = 0 ]
+}
+
 @test "HEAD returns 403 if permission denied" {
   test_returns_403_if_permission_denied -I
 }
@@ -88,7 +95,9 @@ setup () {
 @test "Content-Length for HEAD is accurate" {
   > $BUILD_DIR/blah
   run curl /blah -I
-  [ "$(content_size "$output")" = 0 ];
+  [ "$(content_size "$output")" = 0 ]
+  echo hi > $BUILD_DIR/hey
+  [ "$(content_size "$(curl /hey -I)")" = 3 ]
 }
 
 @test "Resolves subdirectories" {
@@ -96,6 +105,14 @@ setup () {
   echo hi > $BUILD_DIR/subdir/blah
   run curl /subdir/blah -I
   [ "$(content_size "$output")" = 3 ];
+}
+
+@test "Closes connection for HTTP/1.0" {
+  ab -s 1 localhost:$PORT/
+}
+
+@test "Maintains connection for HTTP/1.1+" {
+  curl / localhost:$PORT -v 2>&1 | grep "Re-using existing connection"
 }
 
 teardown () {
