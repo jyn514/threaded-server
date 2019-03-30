@@ -31,9 +31,9 @@ const char *get_mimetype(const char *const filename) {
   }
 
   char *result = strdup(magic_file(cookie, filename));
+  magic_close(cookie);
   // assume this is the same for all extensions
   if (ext != NULL) dict_put(mimetypes, strdup(ext), result);
-  magic_close(cookie);
   return result;
 }
 
@@ -45,14 +45,19 @@ DICT get_all_mimetypes(void) {
       // empty map, we'll look files up with libmagic at runtime
       return result;
   char *line = NULL;
-  while (getline(&line, 0, mime_database) && line != NULL) {
+  size_t n = 0;
+  while (getline(&line, &n, mime_database) > 0 && line != NULL) {
     char *mimetype, *ext;
-    if (line[0] == '#') continue;
-    if (sscanf(line, "%ms\t%ms", &mimetype, &ext)) {
+    if (line[0] != '#' && (n = sscanf(line, "%ms\t%ms\n", &mimetype, &ext)) == 2) {
         dict_put(result, ext, mimetype);
+    } else if (n == 1) {
+        free(mimetype);
     }
     free(line);
+    line = NULL;
+    n = 0;
   }
+  free(line);
   fclose(mime_database);
   return result;
 }
