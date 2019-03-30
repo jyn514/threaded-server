@@ -227,7 +227,7 @@ struct response handle_request(const char *request) {
     result.body,
     result.length,
     result.is_mmapped,
-    strcmp(line.version, "HTTP/1.0") == 0
+    strcmp(line.version, "HTTP/1.0") != 0
   };
   free(line.version);
   free(line.url);
