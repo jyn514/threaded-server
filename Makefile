@@ -18,6 +18,7 @@ override CFLAGS += -pthread -lmagic
 override CXXFLAGS += $(CFLAGS)
 
 BUILD_DIR ?= build
+PORT ?= 8080
 SRC_DIR = src
 
 VPATH = $(SRC_DIR)
@@ -28,6 +29,12 @@ ROOT=$(realpath $(dir $(MAKEFILE)))
 .PHONY: all
 all: $(BUILD_DIR)/main
 
+run: all
+	$(BUILD_DIR)/main $(PORT)
+
+valgrind: all
+	valgrind --leak-check=full $(BUILD_DIR)/main $(PORT)
+
 .PHONY: test
 test: export BUILD_DIR = tmp
 test: test.bats
@@ -37,7 +44,7 @@ test: test.bats
 	cppcheck src/*.c
 
 $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o utils.o)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) -o $@ $^ $(CFLAGS)
 
 $(BUILD_DIR):
 	mkdir -p $@
