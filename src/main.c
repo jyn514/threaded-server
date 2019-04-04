@@ -38,7 +38,7 @@
 
 static int sockfd;
 static volatile sig_atomic_t interrupted = 0;
-char *current_dir;
+char current_dir[PATH_MAX];
 DICT mimetypes;
 
 void *respond(void *arg) {
@@ -112,12 +112,10 @@ int main(int argc, char *argv[]) {
   const char *addr = argc > 2 ? argv[2] : "0.0.0.0";
 
   /* set current_dir */
-  char temp[PATH_MAX];
-  if (!getcwd(temp, sizeof(temp))) {
+  if (!getcwd(current_dir, PATH_MAX)) {
     perror("Could not getcwd");
     exit(1);
   }
-  current_dir = temp;
 
   /* read mimetypes */
   mimetypes = get_all_mimetypes();

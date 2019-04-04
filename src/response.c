@@ -28,7 +28,7 @@
     else { str = tmp; strncat(str, other, other_len__); } \
 } }
 
-extern char *current_dir;
+extern char current_dir[];
 
 enum response_code {
   OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
