@@ -11,7 +11,6 @@
 
 #include "parse.h"
 #include "dict.h"
-#include "utils.h"
 
 extern DICT mimetypes;
 

@@ -43,7 +43,7 @@ test: test.bats
 	clang-tidy src/*.c
 	cppcheck src/*.c
 
-$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o utils.o)
+$(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o)
 	$(CC) -o $@ $^ $(CFLAGS)
 
 $(BUILD_DIR):
@@ -56,8 +56,8 @@ $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $< -c -o $@
 
 $(BUILD_DIR)/main.o: response.h
-$(BUILD_DIR)/response.o: response.h parse.h dict.h utils.h
-$(BUILD_DIR)/parse.o: parse.h dict.h utils.h
+$(BUILD_DIR)/response.o: response.h parse.h dict.h
+$(BUILD_DIR)/parse.o: parse.h dict.h
 $(BUILD_DIR)/dict.o: dict.h
 
 .PHONY: clean
