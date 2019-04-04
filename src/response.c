@@ -20,7 +20,6 @@
 #include "response.h"
 #include "parse.h"
 #include "dict.h"
-#include "utils.h"
 
 #define append(str, other) { {\
     int str_len__ = strlen(str), other_len__ = strlen(other); \
@@ -207,11 +206,9 @@ struct response handle_request(const char *request) {
                *header = make_header(result.code);
     append(result.headers, "Content-Type: text/html; charset=utf-8\r\n");
     int length = snprintf(NULL, 0, error_format, header, header, error);
-    append(result.headers, "Content-Length: ");
-    char *len = itoa(length);
-    append(len, "\r\n");
-    append(result.headers, len);
-    free(len);
+    char buf[50];
+    snprintf(buf, 50, "Content-Length: %d\r\n", length);
+    append(result.headers, buf);
     if (line.method != HEAD) {
         result.length = length;
         result.body = malloc(length+1);
