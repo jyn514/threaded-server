@@ -83,7 +83,7 @@ static inline char *make_header_line(const enum response_code code) {
   return buf;
 }
 
-static inline void add_date(char **str, const time_t t) {
+static inline char *add_date(const time_t t) {
   //  %a: 3, %d: 2, %b: 3, %Y: 4, %H: 2, %M: 2, %S: 2
   //  3 + 2 + 2 + 1 + 3 + 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 + 4 = 29
   //  lets double it, why not
@@ -91,11 +91,11 @@ static inline void add_date(char **str, const time_t t) {
   struct tm *current_time = localtime(&t);
   if (current_time == NULL) {
     perror("Failed to get current time");
-    return;
+    return NULL;
   }
-  char date[LEN];
+  char *date = malloc(LEN);
   strftime(date, LEN, "%a, %d %b %Y %H:%M:%S GMT", current_time);
-  append(*str, date);
+  return date;
 #undef LEN
 }
 
@@ -174,11 +174,14 @@ static void handle_url(struct request_info *info,
     result->length = 0;
   }
   if (result->code == OK) {
-    append(result->headers, "Content-Length: ");
-    append(result->headers, ltoa(stat_info.st_size));
-    append(result->headers, "\r\nLast-Modified: ");
-    add_date(&result->headers, stat_info.st_mtime);
-    append(result->headers, "\r\n");
+    char header[100];
+    char *date = add_date(stat_info.st_mtime);
+    int len = snprintf(header, 100, "Content-Length: %ld\r\n", stat_info.st_size);
+    if (date != NULL) {
+        snprintf(&header[len], 100 - len, "Last-Modified: %s\r\n", date);
+        free(date);
+    }
+    append(result->headers, header);
   }
 }
 
@@ -218,8 +221,12 @@ struct response handle_request(const char *request) {
         result.length = 0;
     }
   }
-  append(result.headers, "Date: ");
-  add_date(&result.headers, time(NULL));
+  char *date = add_date(time(NULL));
+  if (date != NULL) {
+      append(result.headers, "Date: ");
+      append(result.headers, date);
+      free(date);
+  }
   append(result.headers, "\r\nServer: ");
   append(result.headers, server_agent);
   append(result.headers, "\r\n\r\n");
