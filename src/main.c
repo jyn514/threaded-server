@@ -34,7 +34,7 @@
 #define MAX_PORT 65535
 #define SOCKET_BUF_SIZE 8192
 // milliseconds
-#define TIMEOUT 30000
+#define TIMEOUT 5000
 
 static int sockfd;
 static volatile sig_atomic_t interrupted = 0;
