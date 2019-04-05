@@ -159,6 +159,7 @@ static void handle_url(struct request_info *info,
         result->code = FORBIDDEN;
       } else {
         perror("stat failed");
+        result->code = INTERNAL_ERROR;
       }
       free(file);
       return;
