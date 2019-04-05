@@ -152,16 +152,16 @@ static void handle_url(struct request_info *info,
     error = stat(file, &stat_info);
   }
 
-  if (errno == ENOENT) {
-    result->code = NOT_FOUND;
-    free(file);
-    return;
-  } else if (errno == EACCES) {
-    result->code = FORBIDDEN;
-    free(file);
-    return;
-  } else if (error) {
-    perror("stat failed");
+  if (error) {
+      if (errno == ENOENT) {
+        result->code = NOT_FOUND;
+      } else if (errno == EACCES) {
+        result->code = FORBIDDEN;
+      } else {
+        perror("stat failed");
+      }
+      free(file);
+      return;
   }
 
   result->length = stat_info.st_size;
