@@ -9,8 +9,8 @@
 #include <ctype.h>
 #include <magic.h>
 
-#include "parse.h"
-#include "dict.h"
+#include <parse.h>
+#include <dict.h>
 
 extern DICT mimetypes;
 

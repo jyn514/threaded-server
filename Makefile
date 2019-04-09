@@ -15,6 +15,9 @@ override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
 # libraries
 override CFLAGS += -pthread -lmagic
 
+# include
+override CFLAGS += -I inc
+
 override CXXFLAGS += $(CFLAGS)
 
 BUILD_DIR ?= build
@@ -62,4 +65,4 @@ $(BUILD_DIR)/dict.o: dict.h
 
 .PHONY: clean
 clean:
-	$(RM) $(BUILD_DIR)/*.o $(BUILD_DIR)/main
+	$(RM) $(BUILD_DIR)/*.o $(BUILD_DIR)/main $(BUILD_DIR)/tmp

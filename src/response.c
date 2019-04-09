@@ -17,9 +17,9 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "response.h"
-#include "parse.h"
-#include "dict.h"
+#include <response.h>
+#include <parse.h>
+#include <dict.h>
 
 #define append(str, other) { {\
     int str_len__ = strlen(str), other_len__ = strlen(other); \

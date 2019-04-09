@@ -27,8 +27,8 @@
 /* poll */
 #include <poll.h>
 
-#include "response.h"
-#include "parse.h"
+#include <response.h>
+#include <parse.h>
 
 // 2**16 - 1
 #define MAX_PORT 65535
