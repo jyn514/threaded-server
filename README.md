@@ -11,6 +11,12 @@ $ ./main -h
 usage: ./main [<port>] [<host>]
 ```
 
+## Compiling
+### Dependencies
+- make (or `gmake` on Mac/BSD)
+- gcc
+- libmagic (`brew install libmagic` on Mac, should be preinstalled on Linux/BSD)
+
 ## Testing
 ### Dependencies
 - [clang-tidy](https://clang.llvm.org/extra/clang-tidy/)
