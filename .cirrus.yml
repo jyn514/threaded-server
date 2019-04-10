@@ -2,7 +2,7 @@ container:
     image: debian:stretch
 
 install_task:
-    script: apt install make
+    script: apt update && apt install make
 
 check_task:
     depends_on:
