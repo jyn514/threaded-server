@@ -14,14 +14,17 @@ usage: ./main [<port>] [<host>]
 ## Compiling
 ### Dependencies
 - make (or `gmake` on Mac/BSD)
-- gcc
+- a C compiler. clang is the default, change CC=gcc in the makefile if you don't want to install it.
 - libmagic (`brew install libmagic` on Mac, should be preinstalled on Linux/BSD)
 
 ## Testing
 ### Dependencies
+- sed/grep
+- [curl](https://curl.haxx.se/)
+- [ab](https://httpd.apache.org/docs/2.4/programs/ab.html) (`apt install apache2-utils` on debian/ubuntu)
 - [clang-tidy](https://clang.llvm.org/extra/clang-tidy/)
 - [cppcheck](https://sourceforge.net/p/cppcheck/wiki/Home/)
-- [bats](https://github.com/bats-core/bats-core/)
+- bash and [bats](https://github.com/bats-core/bats-core/)
 
 ### Running Tests
 `make test`
