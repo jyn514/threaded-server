@@ -6,5 +6,5 @@ check_task:
         - install
     setup_script:
         - apt update
-        - apt install make build-essential clang
+        - apt install -y make clang
     test_script: make test
