@@ -1,6 +1,10 @@
 container:
     image: debian:stretch
 
+install_task:
+    script: apt install make
+
 check_task:
+    depends_on:
+        - install
     test_script: make test
-    populate_script: apt install make
