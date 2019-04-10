@@ -3,3 +3,4 @@ container:
 
 check_task:
     test_script: make test
+    populate_script: apt install make
