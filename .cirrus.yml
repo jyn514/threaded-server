@@ -6,5 +6,5 @@ check_task:
         - install
     setup_script:
         - apt update
-        - apt install -y make clang
+        - apt install -y make clang libmagic-dev
     test_script: make test
