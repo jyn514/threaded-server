@@ -1,4 +1,4 @@
 debian_task:
-    test_script: make test
+    test_script: make CC=gcc test
     container:
         dockerfile: Dockerfile
