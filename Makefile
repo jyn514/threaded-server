@@ -13,7 +13,7 @@ endif
 override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
 
 # libraries
-override CFLAGS += -pthread -lmagic
+override CFLAGS += -pthread
 
 override CXXFLAGS += $(CFLAGS)
 
@@ -44,7 +44,7 @@ test: test.bats
 	cppcheck src/*.c
 
 $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o)
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) -lmagic
 
 $(BUILD_DIR):
 	mkdir -p $@
