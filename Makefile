@@ -1,5 +1,4 @@
 CC = clang
-CXX = clang++
 
 ifdef NDEBUG
 # optimizations
@@ -14,8 +13,6 @@ override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
 
 # libraries
 override CFLAGS += -pthread
-
-override CXXFLAGS += $(CFLAGS)
 
 BUILD_DIR ?= build
 PORT ?= 8080
@@ -46,9 +43,6 @@ $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o)
 
 $(BUILD_DIR):
 	mkdir -p $@
-
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $< -c -o $@
