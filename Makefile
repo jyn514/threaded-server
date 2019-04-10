@@ -36,10 +36,8 @@ valgrind: all
 	valgrind --leak-check=full $(BUILD_DIR)/main $(PORT)
 
 .PHONY: test
-test: export BUILD_DIR = tmp
 test: test.bats
-	$(MAKE)
-	bats $^
+	./test.sh "$(MAKE)"
 	clang-tidy src/*.c
 	cppcheck src/*.c
 
