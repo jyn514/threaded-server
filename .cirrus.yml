@@ -1,10 +1,4 @@
-container:
-    image: debian:stretch
-
-check_task:
-    depends_on:
-        - install
-    setup_script:
-        - apt update
-        - apt install -y make clang libmagic-dev
+debian_task:
     test_script: make test
+    container:
+        dockerfile: Dockerfile
