@@ -1,0 +1,5 @@
+container:
+    image: debian:stretch
+
+check_task:
+    test_script: make test
