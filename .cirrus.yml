@@ -1,10 +1,10 @@
 container:
     image: debian:stretch
 
-install_task:
-    script: apt update && apt install make
-
 check_task:
     depends_on:
         - install
+    setup_script:
+        - apt update
+        - apt install make build-essential clang
     test_script: make test
