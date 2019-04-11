@@ -2,3 +2,8 @@ debian_task:
     test_script: make CC=gcc test
     container:
         dockerfile: Dockerfile
+
+osx_task:
+    test_script: make test
+    osx_instance:
+        image: mojave-xcode-10.2
