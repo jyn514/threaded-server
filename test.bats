@@ -24,7 +24,7 @@ curl_status () {
 
 content_size () {
   grep "Content-Length: " <<< "$@" |
-  sed 's/Content-Length: //; s/\s//g'
+  sed 's/Content-Length: //; s/\s//g' | tr -d '\r'
 }
 
 # tests
@@ -42,25 +42,25 @@ content_size () {
 }
 
 @test "prevents path traversal" {
-  [ "$(curl_status ../../../../../../../../../etc/passwd)" = 404 ]
+  [ "$(curl_status ../../../../../../../../../etc/passwd)" -eq 404 ]
 }
 
 @test "returns 404 if not found" {
   rm -f not_found
-  [ "$(curl_status not_found "$@")" = 404 ]
+  [ "$(curl_status not_found "$@")" -eq 404 ]
 }
 
 @test "returns 403 if permission denied" {
   touch not_allowed
   chmod 000 not_allowed
-  [ "$(curl_status not_allowed "$@")" = 403 ]
+  [ "$(curl_status not_allowed "$@")" -eq 403 ]
 }
 
 @test "supports HEAD" {
   echo hi > index.html
-  run curl / -I
-  [ "${lines[0]}" = "$(echo -e 'HTTP/1.1 200 OK\r')" ]
-  [ "$(content_size "$output")" = 3 ]
+  output="$(curl / -I)"
+  [ "$(echo "$output" | head -n 1)" = "$(echo -e 'HTTP/1.1 200 OK\r')" ]
+  [ $(content_size "$output") -eq 3 ]
 }
 
 @test "Content-Length is accurate" {
@@ -89,8 +89,7 @@ content_size () {
 @test "Resolves subdirectories" {
   mkdir -p subdir
   echo hi > subdir/blah
-  run curl /subdir/blah -I
-  [ "$(content_size "$output")" = 3 ];
+  [ $(content_size "$(curl /subdir/blah -I)") -eq 3 ] | debug
 }
 
 @test "Closes connection for HTTP/1.0" {
