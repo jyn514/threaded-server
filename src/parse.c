@@ -14,6 +14,12 @@
 
 extern DICT mimetypes;
 
+#define str_impl__(x) # x
+#define str(x) str_impl__(x)
+
+#define MAX_MIMETYPE 1000
+#define MAX_EXT 100
+
 const char *get_mimetype(const char *const filename) {
   char *ext = strchr(filename, '.'), *type;
   if (ext != NULL && (type = dict_get(mimetypes, ++ext)))
@@ -46,13 +52,15 @@ DICT get_all_mimetypes(void) {
   char *line = NULL;
   size_t n = 0;
   while (getline(&line, &n, mime_database) > 0 && line != NULL) {
-    char *mimetype, *ext;
-    if (line[0] != '#' && (n = sscanf(line, "%ms\t%ms\n", &mimetype, &ext)) == 2) {
-        dict_put(result, ext, mimetype);
-    } else if (n == 1) {
-        // clang-tidy mistakenly thinks mimetype is uninitialized
-        // it's written to by sscanf above
-        free(mimetype);  // NOLINT
+    if (line[0] != '#') {
+        char *mimetype = malloc(MAX_MIMETYPE), *ext = malloc(MAX_EXT);
+        if ((n = sscanf(line, "%" str(MAX_MIMETYPE) "s\t"
+                     "%" str(MAX_EXT) "s\n", mimetype, ext)) == 2) {
+            dict_put(result, ext, mimetype);
+        } else {
+            free(mimetype);
+            free(ext);
+        }
     }
     free(line);
     line = NULL;
