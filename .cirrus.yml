@@ -11,6 +11,6 @@ osx_task:
 freebsd_task:
     test_script:
         - .ci/bsd.sh
-        - PATH="/usr/local/libexec/bats-core:$PATH" gmake test-minimal
+        - sudo -u www BUILD_DIR=/var/www/html PATH="/usr/local/libexec/bats-core:$PATH" gmake test-minimal
     freebsd_instance:
         image: freebsd-12-0-release-amd64
