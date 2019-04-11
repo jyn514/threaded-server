@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export BUILD_DIR=tmp
+[ -z "$BUILD_DIR" ] && export BUILD_DIR=tmp
 export PORT=$(( $RANDOM + 1001 ))
 
 if [ -n "$1" ]; then MAKE="$1"
@@ -10,9 +10,9 @@ fi
 
 $MAKE || exit 1
 
-cd tmp
+cd $BUILD_DIR
 ./main $PORT >/dev/null &
-bats ../test.bats
+bats $OLDPWD/test.bats
 STATUS=$?
 kill $!
 exit $STATUS
