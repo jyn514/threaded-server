@@ -1,5 +1,4 @@
 CC = clang
-CXX = clang++
 
 ifdef NDEBUG
 # optimizations
@@ -13,9 +12,7 @@ endif
 override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
 
 # libraries
-override CFLAGS += -pthread -lmagic
-
-override CXXFLAGS += $(CFLAGS)
+override CFLAGS += -pthread
 
 BUILD_DIR ?= build
 PORT ?= 8080
@@ -36,21 +33,16 @@ valgrind: all
 	valgrind --leak-check=full $(BUILD_DIR)/main $(PORT)
 
 .PHONY: test
-test: export BUILD_DIR = tmp
 test: test.bats
-	$(MAKE)
-	bats $^
+	./test.sh "$(MAKE)"
 	clang-tidy src/*.c
 	cppcheck src/*.c
 
 $(BUILD_DIR)/main: $(addprefix $(BUILD_DIR)/,main.o response.o parse.o dict.o)
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) -lmagic
 
 $(BUILD_DIR):
 	mkdir -p $@
-
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $< -c -o $@
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $< -c -o $@
