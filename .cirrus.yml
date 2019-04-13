@@ -9,6 +9,8 @@ osx_task:
         image: mojave-xcode-10.2
 
 freebsd_task:
-    test_script: gmake
+    test_script:
+        - .ci/bsd.sh
+        - gmake
     freebsd_instance:
         image: freebsd-12-0-release-amd64
