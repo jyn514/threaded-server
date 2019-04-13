@@ -32,9 +32,12 @@ run: all
 valgrind: all
 	valgrind --leak-check=full $(BUILD_DIR)/main $(PORT)
 
-.PHONY: test
-test: test.bats
+.PHONY: test-minimal
+test-minimal: test.bats test.sh
 	./test.sh "$(MAKE)"
+
+.PHONY: test
+test: test-minimal
 	clang-tidy src/*.c
 	cppcheck src/*.c
 
