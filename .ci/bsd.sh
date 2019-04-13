@@ -1,5 +1,5 @@
 #!/bin/sh
 # running
-pkg install gmake
+pkg install -y gmake
 # testing
-pkg install valgrind cppcheck llvm bats-core apache24 curl
+pkg install -y valgrind bats-core apache24 curl
