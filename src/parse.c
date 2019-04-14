@@ -22,6 +22,8 @@ extern DICT mimetypes;
 #define MAX_METHOD 50
 #define MAX_URL 8048
 #define MAX_VERSION 25
+#define MAX_HEADER 100
+#define MAX_HEADER_BODY 4096
 
 const char *get_mimetype(const char *const filename) {
   char *ext = strchr(filename, '.'), *type;
@@ -106,12 +108,12 @@ int process_request_line(const char *const request, struct request_info *result)
 }
 
 int process_headers(const char *const request, DICT headers) {
-  char *header, *body;
+  char header[MAX_HEADER], body[MAX_HEADER_BODY];
   int read, ret = 0;
 
   // for every line
-  while ((sscanf(request, "%ms: %ms\r\n%n",
-                           &header, &body, &read)) == 2) {
+  while ((sscanf(request, "%" str(MAX_HEADER) "s: %" str(MAX_HEADER_BODY)
+                  "s\r\n%n", header, body, &read)) == 2) {
     dict_put(headers, header, body);
     ret += read;
   }
