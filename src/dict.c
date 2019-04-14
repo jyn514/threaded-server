@@ -68,21 +68,6 @@ void dict_free(DICT dict) {
     free(dict);
 }
 
-void dict_foreach(DICT dict, mapfunc func, ...) {
-    va_list args, actual;
-    va_start(args, func);
-    for (int i = 0; i < dict->h_size; ++i) {
-        DR current = dict->hash_tab[i];
-        while (current != NULL) {
-            va_copy(actual, args);
-            func(current->key, current->value, actual);
-            va_end(actual);
-            current = current->next;
-        }
-    }
-    va_end(args);
-}
-
 /* Local routines */
 
 /* Returns whether key exists */
