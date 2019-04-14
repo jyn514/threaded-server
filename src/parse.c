@@ -108,7 +108,7 @@ int process_request_line(const char *const request, struct request_info *result)
 }
 
 int process_headers(const char *const request, DICT headers) {
-  char header[MAX_HEADER], body[MAX_HEADER_BODY];
+  char header[MAX_HEADER+1], body[MAX_HEADER_BODY+1];
   int read, ret = 0;
 
   // for every line
