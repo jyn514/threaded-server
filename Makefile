@@ -57,4 +57,4 @@ $(BUILD_DIR)/dict.o: dict.h
 
 .PHONY: clean
 clean:
-	$(RM) $(BUILD_DIR)/*.o $(BUILD_DIR)/main
+	$(RM) -r $(BUILD_DIR) tmp
