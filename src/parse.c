@@ -19,6 +19,9 @@ extern DICT mimetypes;
 
 #define MAX_MIMETYPE 1000
 #define MAX_EXT 100
+#define MAX_METHOD 50
+#define MAX_URL 8048
+#define MAX_VERSION 25
 
 const char *get_mimetype(const char *const filename) {
   char *ext = strchr(filename, '.'), *type;
@@ -72,14 +75,17 @@ DICT get_all_mimetypes(void) {
 }
 
 int process_request_line(const char *const request, struct request_info *result) {
-  char *method;
+  char *method = malloc(MAX_METHOD);
   int read, matched;
-  matched = sscanf(request, "%ms %ms %ms\r\n%n",
-      &method, &result->url, &result->version, &read);
+  result->version = malloc(MAX_VERSION);
+  result->url = malloc(MAX_URL);
+  matched = sscanf(request, "%" str(MAX_METHOD) "s %"
+                   str(MAX_URL) "s %" str(MAX_VERSION) "s\r\n%n",
+                   method, result->url, result->version, &read);
 
   if (matched < 2) {
     result->method = ERROR;
-    if (matched == 1) free(method);
+    free(method);
     return read;
   } else if (matched == 2) {  // no version sent
     result->version = "HTTP/1.0";
