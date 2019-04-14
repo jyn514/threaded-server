@@ -20,6 +20,4 @@ DICT dict_init(void);
 bool dict_put(DICT, char *const key, char *const val);
 char *dict_get(DICT, const char *const key);
 void dict_free(DICT);
-void dict_foreach(DICT, mapfunc, ...);
-
 #endif

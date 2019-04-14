@@ -12,6 +12,7 @@ $MAKE
 
 cd tmp
 ./main $PORT >/dev/null &
-bats ../test.bats || STATUS=$? && STATUS=0
+bats ../test.bats
+STATUS=$?
 kill $!
 exit $STATUS

@@ -198,7 +198,7 @@ struct response handle_request(const char *request) {
     result.code = NOT_IMPLEMENTED;
   } else {
     DICT headers = dict_init();
-    request += process_headers(request, headers);
+    process_headers(request, headers);
     handle_url(&line, headers, &result);
     dict_free(headers);
   }
