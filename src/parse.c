@@ -14,6 +14,17 @@
 
 extern DICT mimetypes;
 
+#define str_impl__(x) # x
+#define str(x) str_impl__(x)
+
+#define MAX_MIMETYPE 1000
+#define MAX_EXT 100
+#define MAX_METHOD 50
+#define MAX_URL 8048
+#define MAX_VERSION 25
+#define MAX_HEADER 100
+#define MAX_HEADER_BODY 4096
+
 const char *get_mimetype(const char *const filename) {
   char *ext = strchr(filename, '.'), *type;
   if (ext != NULL && (type = dict_get(mimetypes, ++ext)))
@@ -46,13 +57,15 @@ DICT get_all_mimetypes(void) {
   char *line = NULL;
   size_t n = 0;
   while (getline(&line, &n, mime_database) > 0 && line != NULL) {
-    char *mimetype, *ext;
-    if (line[0] != '#' && (n = sscanf(line, "%ms\t%ms\n", &mimetype, &ext)) == 2) {
-        dict_put(result, ext, mimetype);
-    } else if (n == 1) {
-        // clang-tidy mistakenly thinks mimetype is uninitialized
-        // it's written to by sscanf above
-        free(mimetype);  // NOLINT
+    if (line[0] != '#') {
+        char *mimetype = malloc(MAX_MIMETYPE), *ext = malloc(MAX_EXT);
+        if ((n = sscanf(line, "%" str(MAX_MIMETYPE) "s\t"
+                     "%" str(MAX_EXT) "s\n", mimetype, ext)) == 2) {
+            dict_put(result, ext, mimetype);
+        } else {
+            free(mimetype);
+            free(ext);
+        }
     }
     free(line);
     line = NULL;
@@ -64,14 +77,17 @@ DICT get_all_mimetypes(void) {
 }
 
 int process_request_line(const char *const request, struct request_info *result) {
-  char *method;
+  char *method = malloc(MAX_METHOD);
   int read, matched;
-  matched = sscanf(request, "%ms %ms %ms\r\n%n",
-      &method, &result->url, &result->version, &read);
+  result->version = malloc(MAX_VERSION);
+  result->url = malloc(MAX_URL);
+  matched = sscanf(request, "%" str(MAX_METHOD) "s %"
+                   str(MAX_URL) "s %" str(MAX_VERSION) "s\r\n%n",
+                   method, result->url, result->version, &read);
 
   if (matched < 2) {
     result->method = ERROR;
-    if (matched == 1) free(method);
+    free(method);
     return read;
   } else if (matched == 2) {  // no version sent
     result->version = "HTTP/1.0";
@@ -92,12 +108,12 @@ int process_request_line(const char *const request, struct request_info *result)
 }
 
 int process_headers(const char *const request, DICT headers) {
-  char *header, *body;
+  char header[MAX_HEADER+1], body[MAX_HEADER_BODY+1];
   int read, ret = 0;
 
   // for every line
-  while ((sscanf(request, "%ms: %ms\r\n%n",
-                           &header, &body, &read)) == 2) {
+  while ((sscanf(request, "%" str(MAX_HEADER) "s: %" str(MAX_HEADER_BODY)
+                  "s\r\n%n", header, body, &read)) == 2) {
     dict_put(headers, header, body);
     ret += read;
   }
