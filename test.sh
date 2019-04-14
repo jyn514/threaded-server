@@ -8,7 +8,7 @@ elif [ -x "$(which gmake)" ]; then MAKE=gmake
 else MAKE=make
 fi
 
-$MAKE
+$MAKE || exit 1
 
 cd tmp
 ./main $PORT >/dev/null &
