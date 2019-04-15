@@ -58,7 +58,7 @@ DICT get_all_mimetypes(void) {
   size_t n = 0;
   while (getline(&line, &n, mime_database) > 0 && line != NULL) {
     if (line[0] != '#') {
-        char *mimetype = malloc(MAX_MIMETYPE), *ext = malloc(MAX_EXT);
+        char *mimetype = malloc(MAX_MIMETYPE + 1), *ext = malloc(MAX_EXT + 1);
         if ((n = sscanf(line, "%" str(MAX_MIMETYPE) "s\t"
                      "%" str(MAX_EXT) "s\n", mimetype, ext)) == 2) {
             dict_put(result, ext, mimetype);
@@ -77,10 +77,10 @@ DICT get_all_mimetypes(void) {
 }
 
 int process_request_line(const char *const request, struct request_info *result) {
-  char *method = malloc(MAX_METHOD);
+  char *method = malloc(MAX_METHOD + 1);
   int read, matched;
-  result->version = malloc(MAX_VERSION);
-  result->url = malloc(MAX_URL);
+  result->version = malloc(MAX_VERSION + 1);
+  result->url = malloc(MAX_URL + 1);
   matched = sscanf(request, "%" str(MAX_METHOD) "s %"
                    str(MAX_URL) "s %" str(MAX_VERSION) "s\r\n%n",
                    method, result->url, result->version, &read);
