@@ -9,7 +9,7 @@ override CFLAGS += -g
 endif
 
 # warnings
-override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow
+override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow -std=c11
 
 # libraries
 override CFLAGS += -pthread

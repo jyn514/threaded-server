@@ -4,6 +4,9 @@
  *
  * Main program. Opens sockets, launches threads, and performs initialization.
  */
+#define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
+
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
@@ -52,7 +55,7 @@ void *respond(void *arg) {
   printf("got new socket connection %d with %d bytes\n", client_sock, bytes);
   char BUF[SOCKET_BUF_SIZE];
 
-  struct pollfd fds = {client_sock, POLL_IN, 0};
+  struct pollfd fds = {client_sock, POLLIN, 0};
 
   while (poll(&fds, 1, TIMEOUT) > 0) {
     // fails miserably if the socket doesn't contain an entire HTTP request
