@@ -5,6 +5,8 @@
  * Responder. Given a request string,
  * performs all application logic to create a response.
  */
+#define _POSIX_C_SOURCE 200809L
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
