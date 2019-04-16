@@ -6,6 +6,14 @@
 #define PARSE_H
 #include "dict.h"
 
+#define MAX_MIMETYPE 1000
+#define MAX_EXT 100
+#define MAX_METHOD 50
+#define MAX_URL 8048
+#define MAX_VERSION 25
+#define MAX_HEADER 100
+#define MAX_HEADER_BODY 4096
+
 enum method {
   GET, HEAD, NOT_RECOGNIZED, ERROR
 };
