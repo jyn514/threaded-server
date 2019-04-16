@@ -129,9 +129,12 @@ static void get_file(const char *const filename,
     close(fd);
     info->code = OK;
     info->is_mmapped = true;
-    append(info->headers, "Content-Type: ");
-    append(info->headers, get_mimetype(filename));
-    append(info->headers, "\r\n");
+    const char *mimetype = get_mimetype(filename);
+    if (mimetype != NULL) {
+        char buf[MAX_MIMETYPE + 17];
+        snprintf(buf, MAX_MIMETYPE + 17, "Content-Type: %s\r\n", mimetype);
+        append(info->headers, buf);
+    }
     return;
   }
   perror("Could not mmap file");

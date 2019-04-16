@@ -9,7 +9,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <magic.h>
 
 #include "parse.h"
 #include "dict.h"
@@ -19,34 +18,11 @@ extern DICT mimetypes;
 #define str_impl__(x) # x
 #define str(x) str_impl__(x)
 
-#define MAX_MIMETYPE 1000
-#define MAX_EXT 100
-#define MAX_METHOD 50
-#define MAX_URL 8048
-#define MAX_VERSION 25
-#define MAX_HEADER 100
-#define MAX_HEADER_BODY 4096
-
 const char *get_mimetype(const char *const filename) {
   char *ext = strchr(filename, '.'), *type;
   if (ext != NULL && (type = dict_get(mimetypes, ++ext)))
     return type;
-
-  // do the expensive libmagic calls
-  // initialize libmagic; it's not thread safe so we don't initialize in main
-  magic_t cookie;
-  if ((cookie = magic_open(MAGIC_SYMLINK |
-          MAGIC_MIME_ENCODING | MAGIC_MIME_TYPE)) == NULL
-      || magic_load(cookie, NULL) != 0) {
-    puts(magic_error(cookie));
-    exit(1);
-  }
-
-  char *result = strdup(magic_file(cookie, filename));
-  magic_close(cookie);
-  // assume this is the same for all extensions
-  if (ext != NULL) dict_put(mimetypes, strdup(ext), result);
-  return result;
+  return NULL;
 }
 
 DICT get_all_mimetypes(void) {
