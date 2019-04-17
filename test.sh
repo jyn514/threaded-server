@@ -8,10 +8,16 @@ elif [ -x "$(which gmake)" ]; then MAKE=gmake
 else MAKE=make
 fi
 
+MAIN=./main
+if [ "$2" = "--valgrind" ] || [ "$2" = '-v' ]; then
+	MAIN="valgrind --leak-check=full $MAIN"
+fi
+
 $MAKE || exit 1
 
 cd $BUILD_DIR
-./main $PORT >/dev/null &
+$MAIN $PORT >/dev/null &
+sleep 1
 bats $OLDPWD/test.bats
 STATUS=$?
 kill $!

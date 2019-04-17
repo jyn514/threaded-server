@@ -34,7 +34,7 @@ valgrind: all
 
 .PHONY: test-minimal
 test-minimal: test.bats test.sh
-	./test.sh "$(MAKE)"
+	./test.sh "$(MAKE)" -v
 
 .PHONY: test
 test: test-minimal
