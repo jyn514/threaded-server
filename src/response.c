@@ -182,11 +182,11 @@ static void handle_url(struct request_info *info,
   }
 }
 
-struct response handle_request(const char *orig_request) {
+struct response handle_request(char *orig_request) {
   struct request_info line;
   struct internal_response result;
   DICT headers = dict_init();
-  const char *request = orig_request + process_request_line(orig_request, &line);
+  char *request = orig_request + process_request_line(orig_request, &line);
   result.is_mmapped = false;
   *(result.headers = malloc(1)) = '\0';
   result.logger = log_init();
@@ -224,10 +224,13 @@ struct response handle_request(const char *orig_request) {
 
   char *date = add_date(time(NULL)),
        *user_agent = dict_get(headers, "User-Agent");
+
+  *(request - 2) = '\0';  // only show header line of original request, minus newline
   log_write(result.logger, "[%s] \"%s\" %d %d \"%s\"",
             date == NULL ? "-" : date, orig_request, result.code,
             result.length, user_agent == NULL ? "-" : user_agent);
   log_flush(result.logger, stderr);
+  log_free(result.logger);
   dict_free(headers);
 
   if (date != NULL) {
