@@ -85,19 +85,14 @@ static inline char *make_header_line(const enum response_code code) {
 }
 
 static inline char *add_date(const time_t t) {
-  //  %a: 3, %d: 2, %b: 3, %Y: 4, %H: 2, %M: 2, %S: 2
-  //  3 + 2 + 2 + 1 + 3 + 1 + 4 + 1 + 2 + 1 + 2 + 1 + 2 + 4 = 29
-  //  lets double it, why not
-#define LEN 60
   struct tm *current_time = localtime(&t);
   if (current_time == NULL) {
     perror("Failed to get current time");
     return NULL;
   }
-  char *date = malloc(LEN);
-  strftime(date, LEN, "%a, %d %b %Y %H:%M:%S GMT", current_time);
+  char *date = malloc(MAX_DATE);
+  strftime(date, MAX_DATE, "%a, %d %b %Y %H:%M:%S GMT", current_time);
   return date;
-#undef LEN
 }
 
 static void get_file(const char *const filename,
@@ -224,15 +219,18 @@ struct response handle_request(const char *request) {
         result.length = 0;
     }
   }
+
+  int len = MAX_DATE + 21 + strlen(server_agent);
+  char other_headers[len];
+  int written = snprintf(other_headers, len - MAX_DATE - 8,
+          "Server: %s\r\n", server_agent);
   char *date = add_date(time(NULL));
   if (date != NULL) {
-      append(result.headers, "Date: ");
-      append(result.headers, date);
+      snprintf(other_headers + written, len - written,
+              "Date: %s\r\n\r\n", date);
       free(date);
-  }
-  append(result.headers, "\r\nServer: ");
-  append(result.headers, server_agent);
-  append(result.headers, "\r\n\r\n");
+  } else strncat(other_headers, "\r\n", 2);
+  append(result.headers, other_headers);
   struct response ret = {
     make_header_line(result.code),
     result.headers,
