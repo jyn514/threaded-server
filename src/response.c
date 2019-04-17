@@ -22,6 +22,7 @@
 #include "response.h"
 #include "parse.h"
 #include "dict.h"
+#include "log.h"
 
 #define append(str, other) { {\
     int str_len__ = strlen(str), other_len__ = strlen(other); \
@@ -32,17 +33,13 @@
 
 extern char current_dir[];
 
-enum response_code {
-  OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
-  NOT_IMPLEMENTED, FORBIDDEN
-};
-
 struct internal_response {
   enum response_code code;
   int length;
   bool is_mmapped;
   char *headers;
   char *body;  // NOT a string, might not be null terminated
+  struct log *logger;
 };
 
 static const char *index_page = "index.html",
@@ -185,22 +182,22 @@ static void handle_url(struct request_info *info,
   }
 }
 
-struct response handle_request(const char *request) {
+struct response handle_request(const char *orig_request) {
   struct request_info line;
   struct internal_response result;
-  request += process_request_line(request, &line);
+  DICT headers = dict_init();
+  const char *request = orig_request + process_request_line(orig_request, &line);
   result.is_mmapped = false;
   *(result.headers = malloc(1)) = '\0';
+  result.logger = log_init();
 
   if (line.method == ERROR) {
     result.code = BAD_REQUEST;
   } else if (line.method == NOT_RECOGNIZED) {
     result.code = NOT_IMPLEMENTED;
   } else {
-    DICT headers = dict_init();
     process_headers(request, headers);
     handle_url(&line, headers, &result);
-    dict_free(headers);
   }
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
@@ -224,7 +221,15 @@ struct response handle_request(const char *request) {
   char other_headers[len];
   int written = snprintf(other_headers, len - MAX_DATE - 8,
           "Server: %s\r\n", server_agent);
-  char *date = add_date(time(NULL));
+
+  char *date = add_date(time(NULL)),
+       *user_agent = dict_get(headers, "User-Agent");
+  log_write(result.logger, "[%s] \"%s\" %d %d \"%s\"",
+            date == NULL ? "-" : date, orig_request, result.code,
+            result.length, user_agent == NULL ? "-" : user_agent);
+  log_flush(result.logger, stderr);
+  dict_free(headers);
+
   if (date != NULL) {
       snprintf(other_headers + written, len - written,
               "Date: %s\r\n\r\n", date);

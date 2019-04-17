@@ -15,5 +15,11 @@ struct response {
   bool is_mmapped;
   bool persist_connection;
 };
+
+enum response_code {
+  OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
+  NOT_IMPLEMENTED, FORBIDDEN
+};
+
 struct response handle_request(const char *);
 #endif  // RESPONSE_H
