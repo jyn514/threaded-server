@@ -21,8 +21,6 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #endif
-/* check available bytes */
-#include <sys/ioctl.h>
 /* mmap */
 #include <sys/mman.h>
 /* INET_ADDR */
@@ -46,15 +44,7 @@ DICT mimetypes;
 
 void *respond(void *arg) {
   int client_sock = (long)arg;
-  int bytes;
-  if (ioctl(client_sock, FIONREAD, &bytes)) {
-    perror("Could not get number of bytes");
-    return NULL;
-  }
-
-  printf("got new socket connection %d with %d bytes\n", client_sock, bytes);
   char BUF[SOCKET_BUF_SIZE];
-
   struct pollfd fds = {client_sock, POLLIN, 0};
 
   while (poll(&fds, 1, TIMEOUT) > 0) {
