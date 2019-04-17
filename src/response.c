@@ -176,7 +176,7 @@ static void handle_url(struct request_info *info,
   if (result->code == OK) {
     char header[100];
     char *date = add_date(stat_info.st_mtime);
-    int len = snprintf(header, 100, "Content-Length: %ld\r\n", stat_info.st_size);
+    int len = snprintf(header, 100, "Content-Length: %ld\r\n", (long)stat_info.st_size);
     if (date != NULL) {
         snprintf(&header[len], 100 - len, "Last-Modified: %s\r\n", date);
         free(date);
