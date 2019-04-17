@@ -93,7 +93,7 @@ content_size () {
 }
 
 @test "Closes connection for HTTP/1.0" {
-  ab -s 1 localhost:$PORT/
+  ab -s 1 -v 4 localhost:$PORT/
 }
 
 @test "Maintains connection for HTTP/1.1+" {
