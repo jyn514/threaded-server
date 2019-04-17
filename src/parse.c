@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 #include "parse.h"
 #include "dict.h"
@@ -36,17 +37,20 @@ DICT get_all_mimetypes(void) {
   size_t n = 0;
   while (getline(&line, &n, mime_database) > 0 && line != NULL) {
     char *mimetype, *ext;
+    bool used_line = false;
     if (line[0] != '#' && (mimetype = strtok(line, " \t\r\n")) && (ext = strtok(NULL, " \t\r\n"))) {
         // there can be multiple extensions for a single mimetype
         // note: doesn't need to be thread-safe since only called at startup
         do {
             // don't replace existing extensions, dict_put will free the memory
             // and segfault
-            if (dict_get(result, ext) == NULL) dict_put(result, ext, mimetype);
+            if (dict_get(result, ext) == NULL) {
+                dict_put(result, ext, mimetype);
+                used_line = true;
+            }
         } while ((ext = strtok(NULL, " \t\r\n")) != NULL);
-    } else {
-        free(line);
     }
+    if (!used_line) free(line);
     line = NULL;
     n = 0;
   }
