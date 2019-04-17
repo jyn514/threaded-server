@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #ifndef RESPONSE_H
 #define RESPONSE_H
+
+#define MAX_DATE 60
+
 struct response {
   char *status, *headers;
   char *body;  // NOT a string, may not be null terminated
