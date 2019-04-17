@@ -21,5 +21,5 @@ enum response_code {
   NOT_IMPLEMENTED, FORBIDDEN
 };
 
-struct response handle_request(const char *);
+struct response handle_request(char *);
 #endif  // RESPONSE_H
