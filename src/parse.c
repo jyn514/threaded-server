@@ -19,7 +19,7 @@ extern DICT mimetypes;
 #define str(x) str_impl__(x)
 
 const char *get_mimetype(const char *const filename) {
-  char *ext = strchr(filename, '.'), *type;
+  char *ext = strrchr(filename, '.'), *type;
   if (ext != NULL && (type = dict_get(mimetypes, ++ext)))
     return type;
   return NULL;
@@ -35,17 +35,18 @@ DICT get_all_mimetypes(void) {
   char *line = NULL;
   size_t n = 0;
   while (getline(&line, &n, mime_database) > 0 && line != NULL) {
-    if (line[0] != '#') {
-        char *mimetype = malloc(MAX_MIMETYPE + 1), *ext = malloc(MAX_EXT + 1);
-        if ((n = sscanf(line, "%" str(MAX_MIMETYPE) "s\t"
-                     "%" str(MAX_EXT) "s\n", mimetype, ext)) == 2) {
-            dict_put(result, ext, mimetype);
-        } else {
-            free(mimetype);
-            free(ext);
-        }
+    char *mimetype, *ext;
+    if (line[0] != '#' && (mimetype = strtok(line, " \t\r\n")) && (ext = strtok(NULL, " \t\r\n"))) {
+        // there can be multiple extensions for a single mimetype
+        // note: doesn't need to be thread-safe since only called at startup
+        do {
+            // don't replace existing extensions, dict_put will free the memory
+            // and segfault
+            if (dict_get(result, ext) == NULL) dict_put(result, ext, mimetype);
+        } while ((ext = strtok(NULL, " \t\r\n")) != NULL);
+    } else {
+        free(line);
     }
-    free(line);
     line = NULL;
     n = 0;
   }
