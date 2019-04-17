@@ -90,15 +90,17 @@ int process_request_line(const char *const request, struct request_info *result)
   return read;
 }
 
-int process_headers(const char *const request, DICT headers) {
+int process_headers(const char *request, DICT headers) {
   char header[MAX_HEADER+1], body[MAX_HEADER_BODY+1];
   int read, ret = 0;
 
   // for every line
-  while ((sscanf(request, "%" str(MAX_HEADER) "s: %" str(MAX_HEADER_BODY)
-                  "s\r\n%n", header, body, &read)) == 2) {
-    dict_put(headers, header, body);
+  while ((sscanf(request, "%" str(MAX_HEADER) "[^ \t\r\n:]: %"
+                          str(MAX_HEADER_BODY) "s\r\n%n",
+                 header, body, &read)) == 2) {
+    dict_put(headers, strdup(header), strdup(body));
     ret += read;
+    request += read;
   }
   return ret;
 }
