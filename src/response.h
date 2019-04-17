@@ -17,8 +17,9 @@ struct response {
 };
 
 enum response_code {
-  OK, TRY_AGAIN, BAD_REQUEST, NO_CONTENT, NOT_FOUND, INTERNAL_ERROR,
-  NOT_IMPLEMENTED, FORBIDDEN
+  OK = 200, NO_CONTENT = 204,
+  BAD_REQUEST = 400, NOT_FOUND = 404, FORBIDDEN = 403,
+  INTERNAL_ERROR = 500, NOT_IMPLEMENTED = 501, TRY_AGAIN = 503
 };
 
 struct response handle_request(char *);
