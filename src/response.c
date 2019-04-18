@@ -229,7 +229,7 @@ struct response handle_request(char *orig_request) {
   log_write(result.logger, "[%s] \"%s\" %d %d \"%s\"",
             date == NULL ? "-" : date, orig_request, result.code,
             result.length, user_agent == NULL ? "-" : user_agent);
-  log_flush(result.logger, stderr);
+  log_flush(result.logger, stdout);
   log_free(result.logger);
   dict_free(headers);
 
