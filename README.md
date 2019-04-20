@@ -1,4 +1,6 @@
 # crappy-server
+[![Build Status](https://img.shields.io/badge/Ci-failing-red.svg)](https://cirrus-ci.com/github/jyn514/crappy-server)
+
 Servers static files and prevents path traversal attacks.
 Will probably crash if you try anything fancy.
 
