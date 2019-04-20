@@ -16,7 +16,7 @@ fi
 $MAKE || exit 1
 
 cd $BUILD_DIR
-$MAIN $PORT >/dev/null &
+$MAIN $PORT &
 sleep 1
 bats $OLDPWD/test.bats
 STATUS=$?
