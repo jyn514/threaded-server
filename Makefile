@@ -14,6 +14,7 @@ override CFLAGS += -Wall -Wextra -Wpedantic -Wshadow -std=c11
 # libraries
 override CFLAGS += -pthread
 
+VALGRIND ?= -v
 BUILD_DIR ?= build
 PORT ?= 8080
 SRC_DIR = src
@@ -34,7 +35,7 @@ valgrind: all
 
 .PHONY: test-minimal
 test-minimal: test.bats test.sh
-	./test.sh "$(MAKE)" -v
+	./test.sh "$(MAKE)" $(VALGRIND)
 
 .PHONY: test
 test: test-minimal
