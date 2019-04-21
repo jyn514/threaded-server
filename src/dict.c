@@ -15,10 +15,10 @@ typedef struct dr {
     struct dr *next;
 } DICT_REC, *DR;
 
-typedef struct dict {
+struct dict {
     int h_size, num_items;
     DR *hash_tab;
-} *DICT;
+};
 
 static bool insert_or_update(DICT, DR new_item);
 static int hash(const char *key, int size);
