@@ -43,7 +43,7 @@ struct internal_response {
 };
 
 static const char *index_page = "index.html",
-                  *server_agent = "crappy_server/0.0.1",
+                  *server_agent = "threaded_server/0.0.1",
                   *error_format = "<!doctype html>\r\n"
 "<html><head>\r\n"
 "<title>%s</title>\r\n"
