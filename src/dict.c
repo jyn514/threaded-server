@@ -26,7 +26,7 @@ static void insert_at_front(DR *list, DR new_item);
 static DR remove_from_front(DR *list);
 static void resize(DICT, int size);
 
-DICT dict_init() {
+DICT dict_init(void) {
     DICT d = malloc(sizeof(struct dict));
     d->h_size = 0;
     d->hash_tab = NULL;
@@ -43,7 +43,6 @@ bool dict_put(DICT dict, char *const key, char *const val) {
     return insert_or_update(dict, p);
 }
 
-/* Returns NULL if item not found */
 char *dict_get(DICT dict, const char *key) {
     int index = hash(key, dict->h_size);
     DR p = dict->hash_tab[index];
@@ -70,7 +69,7 @@ void dict_free(DICT dict) {
 /* Local routines */
 
 /* Returns whether key exists */
-static bool insert_or_update(DICT dict, DR new_item) {
+static bool insert_or_update(DICT dict, const DR new_item) {
     const char *key = new_item->key;
     int index = hash(key, dict->h_size);
     DR p = dict->hash_tab[index], *prev = dict->hash_tab + index;
@@ -98,7 +97,7 @@ static bool insert_or_update(DICT dict, DR new_item) {
     }
 }
 
-static int hash(const char *key, int size) {
+static int hash(const char *key, const int size) {
     int sum = 0;
     for (; *key; key++)
         sum = (37*sum + *key) % size;
@@ -127,7 +126,7 @@ static void resize(DICT dict, int size) {
     if (temp == NULL)
         return;
 
-    for (int i=0; i < temp_size; i++)
+    for (int i = 0; i < temp_size; i++)
         while (temp[i] != NULL) {
             int index = hash(temp[i]->key, size);
             insert_at_front(dict->hash_tab+index, remove_from_front(temp+i));
