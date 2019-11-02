@@ -30,11 +30,11 @@ bool str_append(struct str *s, const char *format, ...) {
         int slen = vsnprintf(NULL, 0, format, args); // NOLINT
         va_end(args);
         if (slen < 0) return false;
-        len = slen + 1;
+        len = slen;
     }
 
     unsigned new_capacity = s->capacity;
-    while (new_capacity - s->len <= len) {
+    while (new_capacity - s->len <= len + 1) {
         new_capacity *= GROWTH_FACTOR;
     }
     if (new_capacity != s->capacity) {
@@ -44,7 +44,7 @@ bool str_append(struct str *s, const char *format, ...) {
         s->capacity = new_capacity;
     }
     va_start(args, format);
-    vsnprintf(s->buf + s->len, len, format, args);
+    vsnprintf(s->buf + s->len, len + 1, format, args);
     va_end(args);
     s->len += len;
     return true;
