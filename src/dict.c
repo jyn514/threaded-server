@@ -47,7 +47,6 @@ bool dict_put(DICT dict, char *const key, char *const val) {
 char *dict_get(DICT dict, const char *key) {
     int index = hash(key, dict->h_size);
     DR p = dict->hash_tab[index];
-    debug1("get: p %s NULL\n", p == NULL ? "==" : "!=");
     while (p != NULL && strcmp(key, p->key))
         p = p->next;
     return p == NULL ? NULL : p->value;
@@ -76,7 +75,6 @@ static bool insert_or_update(DICT dict, DR new_item) {
     int index = hash(key, dict->h_size);
     DR p = dict->hash_tab[index], *prev = dict->hash_tab + index;
 
-    debug1("insert_or_update(key=%s) called\n", new_item->key);
     while (p != NULL && strcmp(key, p->key)) {
         prev = &p->next;
         p = p->next;
@@ -84,17 +82,13 @@ static bool insert_or_update(DICT dict, DR new_item) {
 
     if (p == NULL) {
             /* Insertion */
-        debug1("  p is NULL -- inserting at index %d\n", index);
         insert_at_front(prev, new_item);
-        debug("    done\n");
         if (dict->num_items++ > MAX_LOAD_FACTOR*dict->h_size) {
-            debug("    resizing\n");
             resize(dict, SCALE_FACTOR*dict->h_size);
         }
         return false;
     } else {
             /* Update */
-        debug1("  p is not NULL -- updating at index %d\n", index);
         DR previous = remove_from_front(prev);
         free(previous->value);
         free(previous->key);
