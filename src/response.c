@@ -24,22 +24,14 @@
 #include "dict.h"
 #include "str.h"
 
-#define append(str, other) { {\
-    int str_len__ = strlen(str), other_len__ = strlen(other); \
-    char *tmp = realloc(str, str_len__ + other_len__ + 1); \
-    if (tmp == NULL) perror("append: realloc failed"); \
-    else { str = tmp; strncat(str, other, other_len__); } \
-} }
-
 extern char current_dir[];
 
 struct internal_response {
   enum response_code code;
   int length;
   bool is_mmapped;
-  char *headers;
   char *body;  // NOT a string, might not be null terminated
-  struct str *logger;
+  struct str *logger, *headers;
 };
 
 static const char *index_page = "index.html",
@@ -99,7 +91,7 @@ static void get_file(const char *const filename,
     // TODO: set up a semaphore and wait until we can open the file
     if (errno == EMFILE) {
       info->code = TRY_AGAIN;
-      append(info->headers, "Retry-After: 1\r\n");
+      str_append(info->headers, "Retry-After: 1\r\n");
       return;
     } else if (errno == EACCES) {
       info->code = FORBIDDEN;
@@ -113,24 +105,23 @@ static void get_file(const char *const filename,
       info->body = NULL;
   } else {
       info->body = (char*)mmap(NULL, info->length, PROT_READ, MAP_SHARED, fd, 0);
+      if (info->body == MAP_FAILED) {
+        printf("file: %s, fd: %d\n", filename, fd);
+        perror("Could not mmap file");
+        info->code = INTERNAL_ERROR;
+        return;
+      }
   }
-  if (info->body != MAP_FAILED) {
-    // this is a hack: the memory will stay mapped and
-    // we don't have to worry about closing the file later.
-    // see `man 2 munmap`
-    close(fd);
-    info->code = OK;
-    info->is_mmapped = true;
-    const char *mimetype = get_mimetype(filename);
-    if (mimetype != NULL) {
-        char buf[MAX_MIMETYPE + 17];
-        snprintf(buf, MAX_MIMETYPE + 17, "Content-Type: %s\r\n", mimetype);
-        append(info->headers, buf);
-    }
-    return;
+  // this is a hack: the memory will stay mapped and
+  // we don't have to worry about closing the file later.
+  // see `man 2 munmap`
+  close(fd);
+  info->code = OK;
+  info->is_mmapped = true;
+  const char *mimetype = get_mimetype(filename);
+  if (mimetype != NULL) {
+      str_append(info->headers, "Content-Type: %s\r\n", mimetype);
   }
-  perror("Could not mmap file");
-  info->code = INTERNAL_ERROR;
 }
 
 static void handle_url(struct request_info *info,
@@ -138,15 +129,19 @@ static void handle_url(struct request_info *info,
                 struct internal_response *result) {
   struct stat stat_info;
   int error;
-  char *file = strdup(current_dir);
-  append(file, info->url);
+  struct str *file = str_init();
+  str_append(file, "%s%s", current_dir, info->url);
+  printf("url: %s, file: %s\n", info->url, file->buf);
 
-  if ((error = stat(file, &stat_info)) == 0
+  if ((error = stat(file->buf, &stat_info)) == 0
       && S_ISDIR(stat_info.st_mode)) {
+
     // requested a subdirectory with no trailing slash
-    if (file[strlen(file)] != '/') append(file, "/");
-    append(file, index_page);
-    error = stat(file, &stat_info);
+    if (file->buf[file->len - 1] != '/') str_append(file, "/");
+
+    printf("append_worked? %d, index: %s, new file: %s\n",
+            str_append(file, "%s", index_page), index_page, file->buf);
+    error = stat(file->buf, &stat_info);
   }
 
   if (error) {
@@ -158,27 +153,25 @@ static void handle_url(struct request_info *info,
         perror("stat failed");
         result->code = INTERNAL_ERROR;
       }
-      free(file);
+      str_free(file);
       return;
   }
 
   result->length = stat_info.st_size;
-  get_file(file, result);
-  free(file);
+  get_file(file->buf, result);
+  str_free(file);
   if (info->method == HEAD && result->code == OK) {
     munmap(result->body, result->length);
     result->body = NULL;
     result->length = 0;
   }
   if (result->code == OK) {
-    char header[100];
+    str_append(result->headers, "Content-Length: %ld\r\n", (long)stat_info.st_size);
     char *date = add_date(stat_info.st_mtime);
-    int len = snprintf(header, 100, "Content-Length: %ld\r\n", (long)stat_info.st_size);
     if (date != NULL) {
-        snprintf(&header[len], 100 - len, "Last-Modified: %s\r\n", date);
+        str_append(result->headers, "Last-Modified: %s\r\n", date);
         free(date);
     }
-    append(result->headers, header);
   }
 }
 
@@ -188,8 +181,7 @@ struct response handle_request(char *orig_request) {
   DICT headers = dict_init();
   char *request = orig_request + process_request_line(orig_request, &line);
   result.is_mmapped = false;
-  *(result.headers = malloc(1)) = '\0';
-  result.logger = str_init();
+  result.headers = str_init(), result.logger = str_init();
 
   if (line.method == ERROR) {
     result.code = BAD_REQUEST;
@@ -202,11 +194,9 @@ struct response handle_request(char *orig_request) {
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
                *header = make_header(result.code);
-    append(result.headers, "Content-Type: text/html; charset=utf-8\r\n");
+    str_append(result.headers, "Content-Type: text/html; charset=utf-8\r\n");
     int length = snprintf(NULL, 0, error_format, header, header, error);
-    char buf[50];
-    snprintf(buf, 50, "Content-Length: %d\r\n", length);
-    append(result.headers, buf);
+    str_append(result.headers, "Content-Length: %d\r\n", length);
     if (line.method != HEAD) {
         result.length = length;
         result.body = malloc(length+1);
@@ -217,10 +207,7 @@ struct response handle_request(char *orig_request) {
     }
   }
 
-  int len = MAX_DATE + 21 + strlen(server_agent);
-  char other_headers[len];
-  int written = snprintf(other_headers, len - MAX_DATE - 8,
-          "Server: %s\r\n", server_agent);
+  str_append(result.headers, "Server: %s\r\n", server_agent);
 
   char *date = add_date(time(NULL)),
        *user_agent = dict_get(headers, "User-Agent");
@@ -234,14 +221,13 @@ struct response handle_request(char *orig_request) {
   dict_free(headers);
 
   if (date != NULL) {
-      snprintf(other_headers + written, len - written,
-              "Date: %s\r\n\r\n", date);
+      str_append(result.headers, "Date: %s\r\n", date);
       free(date);
-  } else strncat(other_headers, "\r\n", 2);
-  append(result.headers, other_headers);
+  }
+  str_append(result.headers, "\r\n");
   struct response ret = {
     make_header_line(result.code),
-    result.headers,
+    result.headers->buf,
     result.body,
     result.length,
     result.is_mmapped,
@@ -249,5 +235,6 @@ struct response handle_request(char *orig_request) {
   };
   free(line.version);
   free(line.url);
+  free(result.headers);  // doesn't free the buf
   return ret;
 }
