@@ -5,8 +5,7 @@
 #include <stdbool.h>
 
 typedef struct dict *DICT;
-typedef void (*mapfunc)(const char *key,
-                        const char *value, va_list args);
+
 DICT dict_init(void);
 // Returns whether key already exists
 // NOTE: these are freed when you call dict_free (in Rust terms, they are owned value)
