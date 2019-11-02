@@ -26,13 +26,16 @@ const char *get_mimetype(const char *const filename) {
   return NULL;
 }
 
+// initialize a mime database into a DICT
 DICT get_all_mimetypes(void) {
   DICT result = dict_init();
   FILE *mime_database;
+
   if ((mime_database = fopen("mime.types", "r")) == NULL
       && (mime_database = fopen("/etc/mime.types", "r")) == NULL)
-      // empty map, we'll look files up with libmagic at runtime
+      // empty database, we'll look files up with libmagic at runtime
       return result;
+
   char *line = NULL;
   size_t n = 0;
   while (getline(&line, &n, mime_database) > 0 && line != NULL) {
