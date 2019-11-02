@@ -6,7 +6,9 @@
 
 #include "log.h"
 
+// this must not be 0
 #define INITIAL_SIZE 100
+// this must be greater than 1
 #define GROWTH_FACTOR 2
 
 struct log {
@@ -26,12 +28,18 @@ struct log *log_init(void) {
     return logger;
 }
 
-bool log_write(struct log *logger, char *format, ...) {
+bool log_write(struct log *logger, const char *format, ...) {
+    unsigned int len;
     va_list args;
     va_start(args, format);
-    // for some reason clang-tidy thinks args is uninitialized (??)
-    unsigned int len = vsnprintf(NULL, 0, format, args) + 1;  // NOLINT
-    va_end(args);
+    {
+        // for some reason clang-tidy thinks args is uninitialized (??)
+        // https://stackoverflow.com/questions/58672959
+        int slen = vsnprintf(NULL, 0, format, args); // NOLINT
+        va_end(args);
+        if (slen < 0) return false;
+        len = slen + 1;
+    }
 
     unsigned new_capacity = logger->capacity;
     while (new_capacity - logger->len <= len) {
@@ -51,9 +59,7 @@ bool log_write(struct log *logger, char *format, ...) {
 }
 
 bool log_flush(struct log *logger, FILE *stream) {
-    bool ret = fputs(logger->buf, stream) != EOF;
-    putc('\n', stream);
-    return ret;
+    return fputs(logger->buf, stream) != EOF && putc('\n', stream) != EOF;
 }
 
 void log_free(struct log *logger) {
