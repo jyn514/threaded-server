@@ -42,49 +42,8 @@ static volatile sig_atomic_t interrupted = 0;
 char current_dir[PATH_MAX];
 DICT mimetypes;
 
-void *respond(void *arg) {
-  int client_sock = (long)arg;
-  char BUF[SOCKET_BUF_SIZE];
-  struct pollfd fds = {client_sock, POLLIN, 0};
-
-  while (poll(&fds, 1, TIMEOUT) > 0) {
-    // fails miserably if the socket doesn't contain an entire HTTP request
-    ssize_t received = recv(client_sock, &BUF[0], SOCKET_BUF_SIZE, 0);
-    if (received < 0) {
-      perror("Receive failed");
-      break;
-    } else if (received == 0) {  // connection closed
-      break;
-    }
-    struct response result = handle_request(BUF);
-    if (send(client_sock, result.status, strlen(result.status), 0) < 0
-        || send(client_sock, result.headers, strlen(result.headers), 0) < 0
-        || send(client_sock, result.body, result.length, 0) < 0) {
-      if (errno != EPIPE) perror("Failed to send data through socket");
-    }
-    free(result.status);
-    free(result.headers);
-    if (result.is_mmapped)
-        munmap(result.body, result.length);
-    else
-        free(result.body);
-
-    if (interrupted || !result.persist_connection) break;
-  }
-
-  close(client_sock);
-  return NULL;
-}
-
-// we can't pass arguments to interrupt handlers
-void cleanup(int ignored) {
-  close(sockfd);
-  interrupted = 1;
-  // cout is not interrupt safe
-  const char *message = "Interrupted: preventing further connections\n";
-  write(STDERR_FILENO, message, strlen(message));
-  pthread_exit(NULL);
-}
+static void cleanup(int);
+static void *respond(void *);
 
 int main(int argc, char *argv[]) {
   if (argc > 3 || (argc == 2 &&
@@ -171,4 +130,49 @@ int main(int argc, char *argv[]) {
       pthread_detach(current);
     }
   }
+}
+
+void *respond(void *arg) {
+  int client_sock = (long)arg;
+  char BUF[SOCKET_BUF_SIZE];
+  struct pollfd fds = {client_sock, POLLIN, 0};
+
+  while (poll(&fds, 1, TIMEOUT) > 0) {
+    // fails miserably if the socket doesn't contain an entire HTTP request
+    ssize_t received = recv(client_sock, &BUF[0], SOCKET_BUF_SIZE, 0);
+    if (received < 0) {
+      perror("Receive failed");
+      break;
+    } else if (received == 0) {  // connection closed
+      break;
+    }
+    struct response result = handle_request(BUF);
+    if (send(client_sock, result.status, strlen(result.status), 0) < 0
+        || send(client_sock, result.headers, strlen(result.headers), 0) < 0
+        || send(client_sock, result.body, result.length, 0) < 0) {
+      if (errno != EPIPE) perror("Failed to send data through socket");
+    }
+    free(result.status);
+    free(result.headers);
+    if (result.is_mmapped)
+        munmap(result.body, result.length);
+    else
+        free(result.body);
+
+    if (interrupted || !result.persist_connection) break;
+  }
+
+  close(client_sock);
+  return NULL;
+}
+
+// we can't pass arguments to interrupt handlers, this ignored argument
+// is which signal we got
+void cleanup(int _) {
+  close(sockfd);
+  interrupted = 1;
+  // cout is not interrupt safe
+  const char message[] = "Interrupted: preventing further connections\n";
+  write(STDERR_FILENO, message, sizeof(message));
+  pthread_exit(NULL);
 }
