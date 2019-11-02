@@ -49,7 +49,7 @@ void *respond(void *arg) {
 
   while (poll(&fds, 1, TIMEOUT) > 0) {
     // fails miserably if the socket doesn't contain an entire HTTP request
-    int received = recv(client_sock, &BUF[0], SOCKET_BUF_SIZE, 0);
+    ssize_t received = recv(client_sock, &BUF[0], SOCKET_BUF_SIZE, 0);
     if (received < 0) {
       perror("Receive failed");
       break;
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
   // since 0 is an invalid port anyway, we don't need to handle this specially
   // this does mean that strings starting with a valid port number then garbage
   // will be accepted
-  const int port = argc > 1 ? strtol(argv[1], NULL, 0) : 80;
+  const long port = argc > 1 ? strtol(argv[1], NULL, 0) : 80;
   if (port < 1 || port > MAX_PORT) {
     fprintf(stderr,
             "invalid port number: port must be between 1 and %d\n", MAX_PORT);
