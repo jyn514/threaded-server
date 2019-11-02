@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 [ -z "$BUILD_DIR" ] && export BUILD_DIR=tmp
 export PORT=$(( RANDOM + 1001 ))
 
@@ -15,10 +17,13 @@ fi
 
 $MAKE || exit 1
 
-cd $BUILD_DIR || exit 2
-$MAIN $PORT >/dev/null &
-sleep 1
-bats "$OLDPWD/test.bats"
-STATUS=$?
-kill $!
-exit $STATUS
+(
+	cd $BUILD_DIR
+	$MAIN $PORT >/dev/null &
+	# shellcheck disable=SC2064
+	trap "kill $!" EXIT
+	sleep 1
+	bats "$OLDPWD/test.bats"
+)
+
+find . -name '*.sh' -exec shellcheck {} +
