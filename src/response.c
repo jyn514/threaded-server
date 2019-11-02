@@ -79,6 +79,8 @@ static inline char *add_date(const time_t t) {
     perror("Failed to get current time");
     return NULL;
   }
+  // we can't return a stack-allocated string, so it has to be malloc-ed
+  // it can't be static because it has to be thread-safe
   char *date = malloc(MAX_DATE);
   strftime(date, MAX_DATE, "%a, %d %b %Y %H:%M:%S GMT", current_time);
   return date;
