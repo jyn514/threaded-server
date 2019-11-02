@@ -25,7 +25,7 @@ struct request_info {
 };
 
 DICT get_all_mimetypes(void);
-int process_request_line(const char* const, struct request_info *);
-int process_headers(const char* const, DICT headers);
-const char *get_mimetype(const char *const);
+int process_request_line(const char*, struct request_info *);
+int process_headers(const char*, DICT headers);
+const char *get_mimetype(const char *);
 #endif  // PARSE_H
