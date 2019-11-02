@@ -22,7 +22,7 @@
 #include "response.h"
 #include "parse.h"
 #include "dict.h"
-#include "log.h"
+#include "str.h"
 
 #define append(str, other) { {\
     int str_len__ = strlen(str), other_len__ = strlen(other); \
@@ -39,7 +39,7 @@ struct internal_response {
   bool is_mmapped;
   char *headers;
   char *body;  // NOT a string, might not be null terminated
-  struct log *logger;
+  struct str *logger;
 };
 
 static const char *index_page = "index.html",
@@ -189,7 +189,7 @@ struct response handle_request(char *orig_request) {
   char *request = orig_request + process_request_line(orig_request, &line);
   result.is_mmapped = false;
   *(result.headers = malloc(1)) = '\0';
-  result.logger = log_init();
+  result.logger = str_init();
 
   if (line.method == ERROR) {
     result.code = BAD_REQUEST;
@@ -226,11 +226,11 @@ struct response handle_request(char *orig_request) {
        *user_agent = dict_get(headers, "User-Agent");
 
   *(request - 2) = '\0';  // only show header line of original request, minus newline
-  log_write(result.logger, "[%s] \"%s\" %d %d \"%s\"",
+  str_append(result.logger, "[%s] \"%s\" %d %d \"%s\"",
             date == NULL ? "-" : date, orig_request, result.code,
             result.length, user_agent == NULL ? "-" : user_agent);
-  log_flush(result.logger, stdout);
-  log_free(result.logger);
+  puts(result.logger->buf);
+  str_free(result.logger);
   dict_free(headers);
 
   if (date != NULL) {
