@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
-// bsd
+// bsd doesn't include tcp with sys/socket
 #ifndef IPPROTO_TCP
 #include <netinet/tcp.h>
 #include <netinet/in.h>
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
             "invalid port number: port must be between 1 and %d\n", MAX_PORT);
     exit(1);
   }
-  const char *addr = argc > 2 ? argv[2] : "0.0.0.0";
+  const char *const addr = argc > 2 ? argv[2] : "0.0.0.0";
 
   /* set current_dir */
   if (!getcwd(current_dir, PATH_MAX)) {
@@ -135,14 +135,12 @@ int main(int argc, char *argv[]) {
   handler.sa_handler = &cleanup;
   handler.sa_flags = 0;
   handler.sa_mask = set;
-  if (sigaction(SIGINT, &handler, NULL) != 0) {
-    perror("Failed to register SIGINT handler, quitting");
+  if (sigaction(SIGINT, &handler, NULL) != 0
+    || sigaction(SIGTERM, &handler, NULL) != 0) {
+    perror("Failed to register interrupt handler, quitting");
     exit(1);
   }
-  if (sigaction(SIGTERM, &handler, NULL) != 0) {
-    perror("Failed to register SIGTERM handler, quitting");
-    exit(1);
-  }
+
   /* ignore SIGPIPE when client closes a connection */
   handler.sa_handler = SIG_IGN;
   if (sigaction(SIGPIPE, &handler, NULL) != 0) {
@@ -155,10 +153,11 @@ int main(int argc, char *argv[]) {
     perror("Failed to listen to socket, quitting");
     exit(1);
   }
+
   /* main event loop.
    * get responses out of the way ASAP so we can listen to more connections */
   while (true) {
-    long client_sock = accept(sockfd, NULL, NULL);
+    int client_sock = accept(sockfd, NULL, NULL);
     // branches are expensive,
     // but making a thread for a failed connection is more expensive
     // also, accept will reset perror, so this is only chance to find out
@@ -166,8 +165,9 @@ int main(int argc, char *argv[]) {
     if (client_sock < 0) {
       if (!interrupted) perror("Failed to receive socket connection, ignoring");
     } else {
+      // TODO: actually keep track of which threads are active (:
       pthread_t current;
-      pthread_create(&current, NULL, &respond, (void*)client_sock);
+      pthread_create(&current, NULL, &respond, (void*)(long)client_sock);
       pthread_detach(current);
     }
   }
