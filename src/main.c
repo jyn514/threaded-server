@@ -59,14 +59,14 @@ int main(int argc, char *argv[]) {
   if (port < 1 || port > MAX_PORT) {
     fprintf(stderr,
             "invalid port number: port must be between 1 and %d\n", MAX_PORT);
-    exit(1);
+    exit(2);
   }
   const char *const addr = argc > 2 ? argv[2] : "0.0.0.0";
 
   /* set current_dir */
   if (!getcwd(current_dir, PATH_MAX)) {
     perror("Could not getcwd");
-    exit(1);
+    exit(3);
   }
 
   /* read mimetypes */
@@ -78,13 +78,13 @@ int main(int argc, char *argv[]) {
   addrport.sin_port = htons(port);
   if (inet_aton(addr, &addrport.sin_addr) == 0) {
     fprintf(stderr, "Invalid hostname '%s'\n", addr);
-    exit(1);
+    exit(4);
   }
 
   sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (bind(sockfd, (struct sockaddr *) &addrport, sizeof(addrport)) != 0) {
     perror("Failed to bind to socket, quitting");
-    exit(1);
+    exit(5);
   }
 
   /* register interrupt handler to close the socket */
@@ -97,20 +97,20 @@ int main(int argc, char *argv[]) {
   if (sigaction(SIGINT, &handler, NULL) != 0
     || sigaction(SIGTERM, &handler, NULL) != 0) {
     perror("Failed to register interrupt handler, quitting");
-    exit(1);
+    exit(6);
   }
 
   /* ignore SIGPIPE when client closes a connection */
   handler.sa_handler = SIG_IGN;
   if (sigaction(SIGPIPE, &handler, NULL) != 0) {
     perror("Failed to register SIGPIPE handler, quitting");
-    exit(1);
+    exit(7);
   }
 
   /* open the socket */
   if (listen(sockfd, 10) != 0) {
     perror("Failed to listen to socket, quitting");
-    exit(1);
+    exit(8);
   }
 
   /* main event loop.

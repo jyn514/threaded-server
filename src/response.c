@@ -133,7 +133,6 @@ static void handle_url(struct request_info *info,
   int error;
   struct str *file = str_init();
   str_append(file, "%s%s", current_dir, info->url);
-  printf("url: %s, file: %s\n", info->url, file->buf);
 
   if ((error = stat(file->buf, &stat_info)) == 0
       && S_ISDIR(stat_info.st_mode)) {
