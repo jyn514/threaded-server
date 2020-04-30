@@ -90,7 +90,8 @@ int main(int argc, char *argv[]) {
   /* register interrupt handler to close the socket */
   struct sigaction handler;
   sigset_t set;
-  sigemptyset(&set);
+  // ignore all signals while running the signal handler
+  sigfillset(&set);
   handler.sa_handler = &cleanup;
   handler.sa_flags = 0;
   handler.sa_mask = set;
@@ -130,10 +131,23 @@ int main(int argc, char *argv[]) {
       pthread_detach(current);
     }
   }
+  if (close(sockfd)) {
+      // Nothing we can do except report the error
+      perror("failed to close socket");
+  }
   pthread_exit(NULL);
 }
 
 void *respond(void *arg) {
+  // disable signals to this thread
+  // unless we do this, the signal may be set to a child thread instead of the parent;
+  // see https://stackoverflow.com/a/36645299
+  sigset_t set;
+  sigfillset(&set);
+  if (pthread_sigmask(SIG_SETMASK, &set, NULL)) {
+      perror("failed to block signals in child thread");
+  }
+
   int client_sock = (long)arg;
   char BUF[SOCKET_BUF_SIZE];
   struct pollfd fds = {client_sock, POLLIN, 0};
@@ -170,9 +184,8 @@ void *respond(void *arg) {
 // we can't pass arguments to interrupt handlers, this ignored argument
 // is which signal we got
 void cleanup(int _) {
-  close(sockfd);
   interrupted = 1;
-  // cout is not interrupt safe
+  // puts is not interrupt safe
   const char message[] = "Interrupted: preventing further connections\n";
   write(STDERR_FILENO, message, sizeof(message));
 }
