@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
   /* main event loop.
    * get responses out of the way ASAP so we can listen to more connections */
-  while (true) {
+  while (!interrupted) {
     int client_sock = accept(sockfd, NULL, NULL);
     // branches are expensive,
     // but making a thread for a failed connection is more expensive
@@ -130,6 +130,7 @@ int main(int argc, char *argv[]) {
       pthread_detach(current);
     }
   }
+  pthread_exit(NULL);
 }
 
 void *respond(void *arg) {
@@ -174,5 +175,4 @@ void cleanup(int _) {
   // cout is not interrupt safe
   const char message[] = "Interrupted: preventing further connections\n";
   write(STDERR_FILENO, message, sizeof(message));
-  pthread_exit(NULL);
 }
