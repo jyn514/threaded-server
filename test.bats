@@ -99,3 +99,8 @@ content_size () {
 @test "Maintains connection for HTTP/1.1+" {
   curl / localhost:$PORT -v 2>&1 | grep "Re-using existing connection"
 }
+
+@test "Gives 404 for file with trailing slash" {
+  touch blah
+  [ "$(curl_status blah/)" -eq 404 ]
+}
