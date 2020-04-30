@@ -146,7 +146,7 @@ static void handle_url(struct request_info *info,
   }
 
   if (error) {
-      if (errno == ENOENT) {
+      if (errno == ENOENT || errno == ENOTDIR) {
         result->code = NOT_FOUND;
       } else if (errno == EACCES) {
         result->code = FORBIDDEN;
