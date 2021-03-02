@@ -6,7 +6,7 @@ set -e
 export PORT=$(( RANDOM + 1001 ))
 
 if [ -n "$1" ]; then MAKE="$1"
-elif [ -x "$(which gmake)" ]; then MAKE=gmake
+elif [ -x "$(command -v gmake)" ]; then MAKE=gmake
 else MAKE=make
 fi
 
