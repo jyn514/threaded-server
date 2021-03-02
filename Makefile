@@ -52,11 +52,11 @@ $(BUILD_DIR):
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $< -c -o $@
 
-$(BUILD_DIR)/main.o: response.h
+$(BUILD_DIR)/main.o: response.h parse.h
 $(BUILD_DIR)/response.o: response.h parse.h dict.h str.h
 $(BUILD_DIR)/parse.o: parse.h dict.h
 $(BUILD_DIR)/dict.o: dict.h
-$(BUILD_DIR)/str.o: str.h response.h parse.h dict.h
+$(BUILD_DIR)/str.o: str.h
 
 .PHONY: clean
 clean:
