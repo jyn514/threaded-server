@@ -127,7 +127,6 @@ static void get_file(const char *const filename,
 }
 
 static void handle_url(struct request_info *info,
-                const DICT headers,
                 struct internal_response *result) {
   struct stat stat_info;
   int error;
@@ -139,9 +138,7 @@ static void handle_url(struct request_info *info,
 
     // requested a subdirectory with no trailing slash
     if (file->buf[file->len - 1] != '/') str_append(file, "/");
-
-    printf("append_worked? %d, index: %s, new file: %s\n",
-            str_append(file, "%s", index_page), index_page, file->buf);
+    str_append(file, "%s", index_page);
     error = stat(file->buf, &stat_info);
   }
 
@@ -190,7 +187,7 @@ struct response handle_request(char *orig_request) {
     result.code = NOT_IMPLEMENTED;
   } else {
     process_headers(request, headers);
-    handle_url(&line, headers, &result);
+    handle_url(&line, &result);
   }
   if (result.code != OK) {
     const char *error = "An error occured while processing your request",
